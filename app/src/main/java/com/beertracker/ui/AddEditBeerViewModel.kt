@@ -59,8 +59,11 @@ class AddEditBeerViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Presets.pairings)
 
     private var existing: TriedBeer? = null
+    private var loadedBeerId: String? = null
 
     fun load(beerId: String) {
+        if (loadedBeerId == beerId) return
+        loadedBeerId = beerId
         viewModelScope.launch {
             val loaded = repository.getBeer(beerId) ?: return@launch
             existing = loaded

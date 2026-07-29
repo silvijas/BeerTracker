@@ -186,4 +186,15 @@ class AddEditBeerViewModelTest {
         assertNull(vm.form.value.grade)
         assertFalse(vm.form.value.tried)
     }
+
+    @Test
+    fun `load again does not reset in progress edits`() = runTest {
+        val repo = FakeBeerRepository()
+        repo.addBeer(beer(id = "a", name = "Old Name"))
+        val vm = AddEditBeerViewModel(repo)
+        vm.load("a")
+        vm.update { it.copy(name = "Edited") }
+        vm.load("a")
+        assertEquals("Edited", vm.form.value.name)
+    }
 }
