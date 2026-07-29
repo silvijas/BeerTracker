@@ -27,11 +27,11 @@ data class BeerEntity(
 
 class Converters {
     @TypeConverter
-    fun listToString(value: List<String>): String = value.joinToString("")
+    fun listToString(value: List<String>): String = value.joinToString("\u001F")
 
     @TypeConverter
     fun stringToList(value: String): List<String> =
-        if (value.isEmpty()) emptyList() else value.split("")
+        if (value.isEmpty()) emptyList() else value.split("\u001F")
 }
 
 fun BeerEntity.toDomain() = TriedBeer(
