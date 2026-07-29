@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -14,6 +13,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.beertracker.ui.AddEditBeerViewModel
 import com.beertracker.ui.AddEditScreen
+import com.beertracker.ui.DetailScreen
+import com.beertracker.ui.DetailViewModel
 import com.beertracker.ui.OverviewScreen
 import com.beertracker.ui.OverviewViewModel
 
@@ -53,8 +54,13 @@ fun BeerNavHost() {
                 onDone = { navController.popBackStack() },
             )
         }
-        composable("detail/{beerId}") {
-            Text("Detail screen arrives in Task 9")
+        composable("detail/{beerId}") { backStackEntry ->
+            val beerId = backStackEntry.arguments?.getString("beerId") ?: return@composable
+            DetailScreen(
+                viewModel = viewModel(factory = DetailViewModel.factory(beerId)),
+                onEdit = { id -> navController.navigate("edit?beerId=$id") },
+                onBack = { navController.popBackStack() },
+            )
         }
     }
 }
