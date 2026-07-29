@@ -31,6 +31,16 @@ class OverviewViewModelTest {
     }
 
     @Test
+    fun `default sort puts ungraded beers last`() = runTest {
+        val repo = FakeBeerRepository()
+        repo.addBeer(beer(id = "untried", grade = null, tried = false, dateAdded = 9L))
+        repo.addBeer(beer(id = "graded", grade = 6, dateAdded = 1L))
+        val vm = OverviewViewModel(repo)
+        collecting(vm)
+        assertEquals(listOf("graded", "untried"), vm.uiState.value.beers.map { it.id })
+    }
+
+    @Test
     fun `query narrows the list`() = runTest {
         val repo = FakeBeerRepository()
         repo.addBeer(beer(id = "a", name = "Falcon"))
@@ -51,6 +61,20 @@ class OverviewViewModelTest {
         vm.toggleType("IPA")
         assertEquals(listOf("b"), vm.uiState.value.beers.map { it.id })
         vm.toggleType("IPA")
+        assertEquals(2, vm.uiState.value.beers.size)
+    }
+
+    @Test
+    fun `not tried toggle filters and toggles off again`() = runTest {
+        val repo = FakeBeerRepository()
+        repo.addBeer(beer(id = "graded", grade = 8))
+        repo.addBeer(beer(id = "untried", grade = null, tried = false))
+        val vm = OverviewViewModel(repo)
+        collecting(vm)
+        vm.toggleNotTriedOnly()
+        assertEquals(listOf("untried"), vm.uiState.value.beers.map { it.id })
+        assertTrue(vm.uiState.value.filter.notTriedOnly)
+        vm.toggleNotTriedOnly()
         assertEquals(2, vm.uiState.value.beers.size)
     }
 

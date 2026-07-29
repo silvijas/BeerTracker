@@ -46,6 +46,8 @@ class OverviewViewModel(repository: BeerRepository) : ViewModel() {
 
     fun toggleFavouritesOnly() = filter.update { it.copy(favouritesOnly = !it.favouritesOnly) }
 
+    fun toggleNotTriedOnly() = filter.update { it.copy(notTriedOnly = !it.notTriedOnly) }
+
     fun toggleType(type: String) = filter.update {
         it.copy(types = if (type in it.types) it.types - type else it.types + type)
     }

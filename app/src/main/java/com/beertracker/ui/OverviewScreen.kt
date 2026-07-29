@@ -113,6 +113,11 @@ private fun FilterRow(state: OverviewUiState, viewModel: OverviewViewModel) {
             onClick = viewModel::toggleFavouritesOnly,
             label = { Text("Favourites") },
         )
+        FilterChip(
+            selected = state.filter.notTriedOnly,
+            onClick = viewModel::toggleNotTriedOnly,
+            label = { Text("Not tried") },
+        )
         Box {
             FilterChip(
                 selected = state.filter.types.isNotEmpty(),
@@ -186,6 +191,19 @@ private fun BeerRow(beer: TriedBeer, onClick: () -> Unit) {
                 Text(subtitle, style = MaterialTheme.typography.bodyMedium)
             }
         }
-        Text("${beer.grade}", style = MaterialTheme.typography.headlineMedium)
+        val grade = beer.grade
+        when {
+            grade != null -> Text("$grade", style = MaterialTheme.typography.headlineMedium)
+            beer.tried -> Text(
+                "No grade",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            else -> Text(
+                "Not tried",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }

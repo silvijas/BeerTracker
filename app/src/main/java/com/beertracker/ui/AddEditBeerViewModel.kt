@@ -27,7 +27,8 @@ data class BeerFormState(
     val alcoholPercent: String = "",
     val volumeMl: String = "",
     val price: String = "",
-    val grade: Int = 7,
+    val grade: Int? = null,
+    val tried: Boolean = false,
     val note: String = "",
     val aftertaste: String = "",
     val pairings: Set<String> = emptySet(),
@@ -35,6 +36,7 @@ data class BeerFormState(
     val buyAgain: Boolean = false,
     val favourite: Boolean = false,
     val nameError: Boolean = false,
+    val gradeError: Boolean = false,
     val saved: Boolean = false,
 )
 
@@ -71,6 +73,7 @@ class AddEditBeerViewModel(
                 volumeMl = loaded.volumeMl?.toString() ?: "",
                 price = loaded.price?.toString() ?: "",
                 grade = loaded.grade,
+                tried = loaded.tried,
                 note = loaded.note,
                 aftertaste = loaded.aftertaste,
                 pairings = loaded.goesWellWith.toSet(),
@@ -82,15 +85,34 @@ class AddEditBeerViewModel(
 
     fun update(transform: (BeerFormState) -> BeerFormState) = _form.update(transform)
 
+    /** Picking a grade marks the beer tried. Passing null clears the grade and keeps tried. */
+    fun setGrade(value: Int?) = _form.update {
+        it.copy(grade = value, tried = it.tried || value != null, gradeError = false)
+    }
+
+    /** Turning tried off clears the grade, which keeps the domain invariant satisfied. */
+    fun setTried(value: Boolean) = _form.update {
+        if (value) {
+            it.copy(tried = true)
+        } else {
+            it.copy(tried = false, grade = null, gradeError = false)
+        }
+    }
+
     fun save() {
         val f = _form.value
         if (f.name.isBlank()) {
             _form.update { it.copy(nameError = true) }
             return
         }
+        if (f.grade != null && f.grade !in 5..10) {
+            _form.update { it.copy(gradeError = true) }
+            return
+        }
+        val custom = f.customPairing.trim()
         val pairings = buildList {
             addAll(f.pairings)
-            f.customPairing.trim().takeIf { it.isNotEmpty() }?.let { add(it) }
+            if (custom.isNotEmpty() && custom !in f.pairings) add(custom)
         }
         val beer = TriedBeer(
             id = f.id ?: UUID.randomUUID().toString(),
@@ -101,6 +123,7 @@ class AddEditBeerViewModel(
             volumeMl = f.volumeMl.trim().toIntOrNull(),
             price = f.price.replace(',', '.').toDoubleOrNull(),
             grade = f.grade,
+            tried = f.tried || f.grade != null,
             note = f.note.trim(),
             aftertaste = f.aftertaste.trim(),
             goesWellWith = pairings,
@@ -112,7 +135,16 @@ class AddEditBeerViewModel(
         )
         viewModelScope.launch {
             if (existing == null) repository.addBeer(beer) else repository.updateBeer(beer)
-            _form.update { it.copy(saved = true) }
+            _form.update {
+                it.copy(
+                    tried = beer.tried,
+                    pairings = pairings.toSet(),
+                    customPairing = "",
+                    nameError = false,
+                    gradeError = false,
+                    saved = true,
+                )
+            }
         }
     }
 

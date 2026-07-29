@@ -8,7 +8,8 @@ data class TriedBeer(
     val alcoholPercent: Double?,
     val volumeMl: Int?,
     val price: Double?,
-    val grade: Int,
+    val grade: Int?,
+    val tried: Boolean,
     val note: String,
     val aftertaste: String,
     val goesWellWith: List<String>,
@@ -19,6 +20,7 @@ data class TriedBeer(
     val addedBy: String?,
 ) {
     init {
-        require(grade in 5..10) { "Grade must be between 5 and 10, was $grade" }
+        require(grade == null || grade in 5..10) { "Grade must be between 5 and 10, was $grade" }
+        require(grade == null || tried) { "A graded beer must be tried, grade was $grade" }
     }
 }

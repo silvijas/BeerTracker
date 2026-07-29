@@ -19,6 +19,14 @@ class BeerListLogicTest {
             grade = 8, price = 18.0, dateAdded = 400L, buyAgain = true, favourite = true),
     )
 
+    // The four graded beers above, plus one untried beer and one tried beer with no grade.
+    private val withUngraded = beers + listOf(
+        beer(id = "e", name = "Shelf Find Wheat", brewery = "Nya Carnegie", type = "Wheat",
+            grade = null, tried = false, price = 20.0, dateAdded = 500L, buyAgain = true),
+        beer(id = "f", name = "Tasted At A Bar", brewery = "Omnipollo", type = "Sour",
+            grade = null, tried = true, price = 40.0, dateAdded = 250L),
+    )
+
     @Test
     fun `query matches name brewery and type case-insensitively`() {
         assertEquals(listOf("b"), result(BeerFilter(query = "punk")).map { it.id })
@@ -49,13 +57,40 @@ class BeerListLogicTest {
     }
 
     @Test
+    fun `not tried filter keeps only untried beers`() {
+        assertEquals(listOf("e"), ungradedResult(BeerFilter(notTriedOnly = true)).map { it.id })
+    }
+
+    @Test
+    fun `not tried filter combines with the other filters`() {
+        assertEquals(listOf("e"),
+            ungradedResult(BeerFilter(notTriedOnly = true, buyAgainOnly = true)).map { it.id })
+        assertEquals(emptyList<String>(),
+            ungradedResult(BeerFilter(notTriedOnly = true, favouritesOnly = true)).map { it.id })
+        assertEquals(emptyList<String>(),
+            ungradedResult(BeerFilter(notTriedOnly = true, types = setOf("Lager"))).map { it.id })
+    }
+
+    @Test
     fun `sort by grade descends with newest first on ties`() {
         assertEquals(listOf("b", "d", "c", "a"), result(sort = BeerSort.GRADE).map { it.id })
     }
 
     @Test
+    fun `sort by grade puts ungraded beers last, newest of them first`() {
+        assertEquals(listOf("b", "d", "c", "a", "e", "f"),
+            ungradedResult(sort = BeerSort.GRADE).map { it.id })
+    }
+
+    @Test
     fun `sort by price ascends with null prices last`() {
         assertEquals(listOf("a", "d", "b", "c"), result(sort = BeerSort.PRICE).map { it.id })
+    }
+
+    @Test
+    fun `sort by price ignores whether a beer has a grade`() {
+        assertEquals(listOf("a", "d", "e", "b", "f", "c"),
+            ungradedResult(sort = BeerSort.PRICE).map { it.id })
     }
 
     @Test
@@ -70,4 +105,7 @@ class BeerListLogicTest {
 
     private fun result(filter: BeerFilter = BeerFilter(), sort: BeerSort = BeerSort.GRADE) =
         filterAndSort(beers, filter, sort)
+
+    private fun ungradedResult(filter: BeerFilter = BeerFilter(), sort: BeerSort = BeerSort.GRADE) =
+        filterAndSort(withUngraded, filter, sort)
 }

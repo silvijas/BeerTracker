@@ -14,7 +14,8 @@ data class BeerEntity(
     val alcoholPercent: Double?,
     val volumeMl: Int?,
     val price: Double?,
-    val grade: Int,
+    val grade: Int?,
+    val tried: Boolean,
     val note: String,
     val aftertaste: String,
     val goesWellWith: List<String>,
@@ -35,13 +36,13 @@ class Converters {
 }
 
 fun BeerEntity.toDomain() = TriedBeer(
-    id, name, brewery, type, alcoholPercent, volumeMl, price, grade,
+    id, name, brewery, type, alcoholPercent, volumeMl, price, grade, tried,
     note, aftertaste, goesWellWith, buyAgain, favourite, dateAdded,
     catalogArticleNumber, addedBy,
 )
 
 fun TriedBeer.toEntity() = BeerEntity(
-    id, name, brewery, type, alcoholPercent, volumeMl, price, grade,
+    id, name, brewery, type, alcoholPercent, volumeMl, price, grade, tried,
     note, aftertaste, goesWellWith, buyAgain, favourite, dateAdded,
     catalogArticleNumber, addedBy,
 )
