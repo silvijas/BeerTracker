@@ -12,6 +12,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.beertracker.ui.AddEditBeerViewModel
+import com.beertracker.ui.AddEditScreen
 import com.beertracker.ui.OverviewScreen
 import com.beertracker.ui.OverviewViewModel
 
@@ -44,8 +46,12 @@ fun BeerNavHost() {
                 nullable = true
                 defaultValue = null
             }),
-        ) {
-            Text("Add or edit screen arrives in Task 8")
+        ) { backStackEntry ->
+            AddEditScreen(
+                viewModel = viewModel(factory = AddEditBeerViewModel.Factory),
+                beerId = backStackEntry.arguments?.getString("beerId"),
+                onDone = { navController.popBackStack() },
+            )
         }
         composable("detail/{beerId}") {
             Text("Detail screen arrives in Task 9")
