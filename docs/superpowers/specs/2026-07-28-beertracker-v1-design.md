@@ -21,6 +21,8 @@ poor, so it works offline and syncs when connectivity returns.
 - Browse the shared list of tried beers with search, filters, and sorting.
 - Add a beer three ways: manual, Systembolaget shelf-label scan, can photo.
 - Grade and annotate each beer.
+- Add a beer without having tried it, for example a bottle spotted on a shelf
+  that is worth buying later, then grade it once it has been tasted.
 - Cloud sync of the shared list across two phones (Firebase).
 - Pair the two phones with a simple invite code (WhatsApp-style: one phone
   authorizes the other to share the same list). A QR code or link is an
@@ -55,7 +57,9 @@ TriedBeer:
 - alcoholPercent
 - volumeMl
 - price
-- grade (integer: 5, 6, 7, 8, 9, or 10; Serbian university scale)
+- grade (optional integer: 5, 6, 7, 8, 9, or 10; Serbian university scale; empty
+  while the beer has no score)
+- tried (boolean: whether the beer has actually been tasted)
 - note (free text)
 - aftertaste (free text)
 - goesWellWith (list of chips plus optional free text; preset chips: Red meat,
@@ -67,6 +71,17 @@ TriedBeer:
 - catalogArticleNumber (optional link to a CatalogProduct)
 - userPhotoRef (optional, a photo the user took)
 - addedBy (which member added it; useful once two people share the list)
+
+Grade and tried rules:
+- A grade only means something for a beer that was tasted, so a grade implies
+  tried is true.
+- Valid grade values stay 5 to 10.
+- Three legal states, and no others:
+  1. Not tried: no grade, tried false. A beer noted in the store to buy later.
+  2. Tried without a grade: no grade, tried true. Tasted, not scored yet.
+  3. Tried with a grade: grade 5 to 10, tried true.
+- The domain model rejects any other combination, so the list can never hold a
+  graded beer that is marked as not tried.
 
 Cellar (the shared group):
 - id
@@ -129,11 +144,14 @@ CatalogProduct:
 ### Overview (home)
 
 - Search box matching name, brewery, and type.
-- Filter chips: Buy again, Favourites, and a beer-type multi-select combobox
-  (choose one or more types to show).
-- Sort menu: grade (default), price, name or brewery, date added.
+- Filter chips: Buy again, Favourites, Not tried, and a beer-type multi-select
+  combobox (choose one or more types to show). The Not tried chip shows only the
+  beers that have not been tasted yet, which is the in-store shopping list.
+- Sort menu: grade (default), price, name or brewery, date added. Grade sort runs
+  from highest to lowest and puts beers with no grade last.
 - Each row shows: name, brewery, type, the grade prominently, plus star and
-  buy-again markers.
+  buy-again markers. A beer that has not been tried shows a "Not tried" badge
+  where the grade would be, and a tried beer with no score shows "No grade".
 - Tap a row to open the detail screen.
 
 ### Add beer
@@ -150,9 +168,16 @@ Entry point is a plus button offering three paths:
 
 All fields remain editable regardless of the path used.
 
+The grade is optional, which is what makes the in-store path work: a beer can be
+saved with nothing but a name. Selecting a grade marks the beer as tried. A
+"tried" toggle sits next to the grade and can be switched on with no grade, for a
+beer that was tasted but not scored yet. Switching the toggle off clears the
+grade, so a saved beer always lands in one of the three legal states.
+
 ### Beer detail
 
-- Shows all fields.
+- Shows all fields, with a "Not tried" or "No grade" label in place of the number
+  when the beer has no grade. Grading it is done from the edit screen.
 - Edit any field, toggle favourite and buy-again, delete the entry.
 - Product image loads from its URL when online.
 
