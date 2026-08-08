@@ -206,5 +206,6 @@ class ComposeUiSmokeTest {
         dateAdded = 0L,
         catalogArticleNumber = null,
         addedBy = null,
+        imageUrl = null,
     )
 }

@@ -18,6 +18,7 @@ data class TriedBeer(
     val dateAdded: Long,
     val catalogArticleNumber: String?,
     val addedBy: String?,
+    val imageUrl: String?,
 ) {
     init {
         require(grade == null || grade in 5..10) { "Grade must be between 5 and 10, was $grade" }

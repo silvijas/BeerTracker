@@ -19,6 +19,7 @@ fun beer(
     buyAgain: Boolean = false,
     favourite: Boolean = false,
     dateAdded: Long = 0L,
+    imageUrl: String? = null,
 ) = TriedBeer(
     id = id,
     name = name,
@@ -37,6 +38,7 @@ fun beer(
     dateAdded = dateAdded,
     catalogArticleNumber = null,
     addedBy = null,
+    imageUrl = imageUrl,
 )
 
 fun catalogProduct(

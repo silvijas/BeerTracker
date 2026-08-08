@@ -198,6 +198,7 @@ class AddEditBeerViewModel(
             dateAdded = existing?.dateAdded ?: clock(),
             catalogArticleNumber = existing?.catalogArticleNumber,
             addedBy = existing?.addedBy,
+            imageUrl = existing?.imageUrl,
         )
         _form.update { it.copy(saveState = SaveState.Saving, saved = false) }
         viewModelScope.launch {

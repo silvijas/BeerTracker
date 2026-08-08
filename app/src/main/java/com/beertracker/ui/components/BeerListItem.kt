@@ -148,6 +148,7 @@ private fun BeerListItemPreview() {
                 dateAdded = 0,
                 catalogArticleNumber = null,
                 addedBy = null,
+                imageUrl = null,
             ),
             onClick = {},
         )
