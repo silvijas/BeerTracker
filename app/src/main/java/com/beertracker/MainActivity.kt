@@ -3,7 +3,7 @@ package com.beertracker
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material3.MaterialTheme
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -17,12 +17,14 @@ import com.beertracker.ui.DetailScreen
 import com.beertracker.ui.DetailViewModel
 import com.beertracker.ui.OverviewScreen
 import com.beertracker.ui.OverviewViewModel
+import com.beertracker.ui.theme.BeerTrackerTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContent {
-            MaterialTheme {
+            BeerTrackerTheme {
                 BeerNavHost()
             }
         }

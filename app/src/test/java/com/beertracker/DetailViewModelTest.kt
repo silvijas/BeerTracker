@@ -1,8 +1,14 @@
 package com.beertracker
 
+import com.beertracker.domain.BeerRepository
+import com.beertracker.domain.TriedBeer
+import com.beertracker.ui.DetailUiState
 import com.beertracker.ui.DetailViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -11,6 +17,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class DetailViewModelTest {
 
     @get:Rule
@@ -48,4 +55,54 @@ class DetailViewModelTest {
         assertTrue(deleted)
         assertEquals(0, repo.observeBeers().first().size)
     }
+
+    @Test
+    fun `detail starts in loading state`() {
+        val vm = DetailViewModel(FakeBeerRepository(), "a")
+
+        assertEquals(DetailUiState.Loading, vm.uiState.value)
+    }
+
+    @Test
+    fun `existing beer exposes content state`() = runTest {
+        val repo = FakeBeerRepository()
+        repo.addBeer(beer(id = "a", name = "Falcon"))
+        val vm = DetailViewModel(repo, "a")
+
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect() }
+
+        assertEquals("Falcon", (vm.uiState.value as DetailUiState.Content).beer.name)
+    }
+
+    @Test
+    fun `missing beer exposes not found state`() = runTest {
+        val vm = DetailViewModel(FakeBeerRepository(), "missing")
+
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect() }
+
+        assertEquals(DetailUiState.NotFound, vm.uiState.value)
+    }
+
+    @Test
+    fun `repository failure exposes detail error state`() = runTest {
+        val vm = DetailViewModel(FailingObserveRepository(), "a")
+
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect() }
+
+        assertEquals("Could not load beer", (vm.uiState.value as DetailUiState.Error).message)
+    }
+}
+
+private class FailingObserveRepository : BeerRepository {
+    override fun observeBeers(): Flow<List<TriedBeer>> = flow {
+        throw IllegalStateException("database unavailable")
+    }
+
+    override suspend fun getBeer(id: String): TriedBeer? = null
+
+    override suspend fun addBeer(beer: TriedBeer) = Unit
+
+    override suspend fun updateBeer(beer: TriedBeer) = Unit
+
+    override suspend fun deleteBeer(id: String) = Unit
 }
