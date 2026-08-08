@@ -5,12 +5,14 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.beertracker.data.CatalogDatabase
 import com.beertracker.data.CatalogImporter
+import com.beertracker.data.parseCatalogAsset
 import com.beertracker.data.toEntity
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -83,5 +85,19 @@ class CatalogImporterTest {
         CatalogImporter({ seedJson("2026-08-08", "101") }, db).importIfNeeded()
         CatalogImporter({ "this is not json" }, db).importIfNeeded()
         assertEquals(1, db.catalogDao().count())
+    }
+
+    @Test
+    fun `parses and imports the real bundled catalog asset`() = runTest {
+        val context = ApplicationProvider.getApplicationContext<Application>()
+        val assetText = context.assets.open("catalog/beers.json").bufferedReader().use { it.readText() }
+
+        val seed = parseCatalogAsset(assetText)
+        assertEquals(1530, seed.beers.size)
+        assertTrue(seed.snapshotVersion.isNotBlank())
+
+        CatalogImporter({ assetText }, db).importIfNeeded()
+        assertEquals(1530, db.catalogDao().count())
+        assertEquals("1462", db.catalogDao().findByNumber("146212")?.articleNumberShort)
     }
 }
