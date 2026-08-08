@@ -24,6 +24,7 @@ data class BeerEntity(
     val dateAdded: Long,
     val catalogArticleNumber: String?,
     val addedBy: String?,
+    val imageUrl: String?,
 )
 
 class Converters {
@@ -38,11 +39,11 @@ class Converters {
 fun BeerEntity.toDomain() = TriedBeer(
     id, name, brewery, type, alcoholPercent, volumeMl, price, grade, tried,
     note, aftertaste, goesWellWith, buyAgain, favourite, dateAdded,
-    catalogArticleNumber, addedBy,
+    catalogArticleNumber, addedBy, imageUrl,
 )
 
 fun TriedBeer.toEntity() = BeerEntity(
     id, name, brewery, type, alcoholPercent, volumeMl, price, grade, tried,
     note, aftertaste, goesWellWith, buyAgain, favourite, dateAdded,
-    catalogArticleNumber, addedBy,
+    catalogArticleNumber, addedBy, imageUrl,
 )
