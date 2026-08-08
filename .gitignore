@@ -6,3 +6,8 @@ local.properties
 .kotlin/
 captures/
 .DS_Store
+
+# Android signing keys
+*.jks
+*.keystore
+*.p12

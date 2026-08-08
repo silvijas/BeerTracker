@@ -9,17 +9,45 @@ android {
     namespace = "com.beertracker"
     compileSdk = 35
 
+    val releaseSigningValues = mapOf(
+        "ANDROID_KEYSTORE_PATH" to providers.environmentVariable("ANDROID_KEYSTORE_PATH").orNull,
+        "ANDROID_KEYSTORE_PASSWORD" to providers.environmentVariable("ANDROID_KEYSTORE_PASSWORD").orNull,
+        "ANDROID_KEY_ALIAS" to providers.environmentVariable("ANDROID_KEY_ALIAS").orNull,
+        "ANDROID_KEY_PASSWORD" to providers.environmentVariable("ANDROID_KEY_PASSWORD").orNull,
+    )
+    val hasReleaseSigningValue = releaseSigningValues.values.any { !it.isNullOrBlank() }
+    val hasCompleteReleaseSigning = releaseSigningValues.values.all { !it.isNullOrBlank() }
+
+    require(!hasReleaseSigningValue || hasCompleteReleaseSigning) {
+        "Release signing requires ANDROID_KEYSTORE_PATH, ANDROID_KEYSTORE_PASSWORD, " +
+            "ANDROID_KEY_ALIAS, and ANDROID_KEY_PASSWORD"
+    }
+
     defaultConfig {
         applicationId = "com.beertracker"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = providers.environmentVariable("CI_VERSION_CODE").orNull?.toInt() ?: 1
+        versionName = providers.environmentVariable("CI_VERSION_NAME").orNull ?: "0.1.0"
+    }
+
+    signingConfigs {
+        if (hasCompleteReleaseSigning) {
+            create("release") {
+                storeFile = file(requireNotNull(releaseSigningValues["ANDROID_KEYSTORE_PATH"]))
+                storePassword = releaseSigningValues["ANDROID_KEYSTORE_PASSWORD"]
+                keyAlias = releaseSigningValues["ANDROID_KEY_ALIAS"]
+                keyPassword = releaseSigningValues["ANDROID_KEY_PASSWORD"]
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (hasCompleteReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     compileOptions {
