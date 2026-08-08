@@ -116,4 +116,5 @@
     <string name="catalog_status_bundled">Using the bundled catalog, %1$d beers. Not updated yet.</string>
     <string name="catalog_status_updated">Updated %1$s, %2$d beers.</string>
     <string name="catalog_updated_message">Catalog updated, %1$d beers</string>
+    <string name="beer_image_description">Product image for %1$s</string>
 </resources>
