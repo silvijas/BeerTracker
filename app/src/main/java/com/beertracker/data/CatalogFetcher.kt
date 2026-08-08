@@ -4,7 +4,6 @@ import com.beertracker.domain.CatalogProduct
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
-import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -88,9 +87,13 @@ internal fun mapProduct(product: JSONObject): CatalogProduct {
             ?: product.optStringOrNull("categoryLevel3")
             ?: "Öl",
         alcoholPercent = product.optDoubleOrNull("alcoholPercentage"),
-        volumeMl = product.optDoubleOrNull("volume")?.roundToInt(),
+        // Half-to-even, matching Python's round(): int(round(330.5)) == 330.
+        volumeMl = product.optDoubleOrNull("volume")?.let { Math.rint(it).toInt() },
         price = product.optDoubleOrNull("price"),
-        country = product.optStringOrNull("country"),
+        // Field-specific, not optStringOrNull: the seed script's country field
+        // is a plain passthrough (no "or" fallback), so a present empty string
+        // must stay "" instead of collapsing to null like the other fields do.
+        country = if (product.isNull("country")) null else product.getString("country"),
         imageUrl = imageUrl,
     )
 }
