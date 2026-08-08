@@ -10,6 +10,7 @@ import com.beertracker.domain.BeerRepository
 import com.beertracker.domain.Presets
 import com.beertracker.domain.TriedBeer
 import java.util.UUID
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -18,6 +19,20 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+sealed interface EditLoadState {
+    data object Loading : EditLoadState
+    data object Content : EditLoadState
+    data object NotFound : EditLoadState
+    data class Error(val message: String) : EditLoadState
+}
+
+sealed interface SaveState {
+    data object Idle : SaveState
+    data object Saving : SaveState
+    data object Saved : SaveState
+    data class Error(val message: String) : SaveState
+}
 
 data class BeerFormState(
     val id: String? = null,
@@ -37,6 +52,12 @@ data class BeerFormState(
     val favourite: Boolean = false,
     val nameError: Boolean = false,
     val gradeError: Boolean = false,
+    val alcoholError: Boolean = false,
+    val volumeError: Boolean = false,
+    val priceError: Boolean = false,
+    val loadState: EditLoadState = EditLoadState.Content,
+    val saveState: SaveState = SaveState.Idle,
+    val hasUnsavedChanges: Boolean = false,
     val saved: Boolean = false,
 )
 
@@ -60,41 +81,76 @@ class AddEditBeerViewModel(
 
     private var existing: TriedBeer? = null
     private var loadedBeerId: String? = null
+    private var baseline = BeerFormState()
 
     fun load(beerId: String) {
         if (loadedBeerId == beerId) return
         loadedBeerId = beerId
-        viewModelScope.launch {
-            val loaded = repository.getBeer(beerId) ?: return@launch
-            existing = loaded
-            _form.value = BeerFormState(
-                id = loaded.id,
-                name = loaded.name,
-                brewery = loaded.brewery,
-                type = loaded.type,
-                alcoholPercent = loaded.alcoholPercent?.toString() ?: "",
-                volumeMl = loaded.volumeMl?.toString() ?: "",
-                price = loaded.price?.toString() ?: "",
-                grade = loaded.grade,
-                tried = loaded.tried,
-                note = loaded.note,
-                aftertaste = loaded.aftertaste,
-                pairings = loaded.goesWellWith.toSet(),
-                buyAgain = loaded.buyAgain,
-                favourite = loaded.favourite,
+        existing = null
+        _form.update {
+            it.copy(
+                loadState = EditLoadState.Loading,
+                saveState = SaveState.Idle,
+                saved = false,
+                hasUnsavedChanges = false,
             )
+        }
+        viewModelScope.launch {
+            try {
+                val loaded = repository.getBeer(beerId)
+                if (loaded == null) {
+                    _form.update {
+                        it.copy(loadState = EditLoadState.NotFound, hasUnsavedChanges = false)
+                    }
+                    return@launch
+                }
+                existing = loaded
+                val loadedForm = BeerFormState(
+                    id = loaded.id,
+                    name = loaded.name,
+                    brewery = loaded.brewery,
+                    type = loaded.type,
+                    alcoholPercent = loaded.alcoholPercent?.toString() ?: "",
+                    volumeMl = loaded.volumeMl?.toString() ?: "",
+                    price = loaded.price?.toString() ?: "",
+                    grade = loaded.grade,
+                    tried = loaded.tried,
+                    note = loaded.note,
+                    aftertaste = loaded.aftertaste,
+                    pairings = loaded.goesWellWith.toSet(),
+                    buyAgain = loaded.buyAgain,
+                    favourite = loaded.favourite,
+                    loadState = EditLoadState.Content,
+                )
+                baseline = loadedForm
+                _form.value = loadedForm
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                _form.update {
+                    it.copy(
+                        loadState = EditLoadState.Error("Could not load beer"),
+                        hasUnsavedChanges = false,
+                    )
+                }
+            }
         }
     }
 
-    fun update(transform: (BeerFormState) -> BeerFormState) = _form.update(transform)
+    fun update(transform: (BeerFormState) -> BeerFormState) = _form.update { current ->
+        transform(current)
+            .withNumericValidation()
+            .let { updated ->
+                updated.copy(hasUnsavedChanges = updated.formContent() != baseline.formContent())
+            }
+    }
 
     /** Picking a grade marks the beer tried. Passing null clears the grade and keeps tried. */
-    fun setGrade(value: Int?) = _form.update {
+    fun setGrade(value: Int?) = update {
         it.copy(grade = value, tried = it.tried || value != null, gradeError = false)
     }
 
     /** Turning tried off clears the grade, which keeps the domain invariant satisfied. */
-    fun setTried(value: Boolean) = _form.update {
+    fun setTried(value: Boolean) = update {
         if (value) {
             it.copy(tried = true)
         } else {
@@ -103,7 +159,13 @@ class AddEditBeerViewModel(
     }
 
     fun save() {
-        val f = _form.value
+        if (_form.value.loadState != EditLoadState.Content ||
+            _form.value.saveState == SaveState.Saving
+        ) {
+            return
+        }
+        val f = _form.value.withNumericValidation()
+        _form.value = f
         if (f.name.isBlank()) {
             _form.update { it.copy(nameError = true) }
             return
@@ -112,6 +174,7 @@ class AddEditBeerViewModel(
             _form.update { it.copy(gradeError = true) }
             return
         }
+        if (f.alcoholError || f.volumeError || f.priceError) return
         val custom = f.customPairing.trim()
         val pairings = buildList {
             addAll(f.pairings)
@@ -136,17 +199,47 @@ class AddEditBeerViewModel(
             catalogArticleNumber = existing?.catalogArticleNumber,
             addedBy = existing?.addedBy,
         )
+        _form.update { it.copy(saveState = SaveState.Saving, saved = false) }
         viewModelScope.launch {
-            if (existing == null) repository.addBeer(beer) else repository.updateBeer(beer)
-            _form.update {
-                it.copy(
+            try {
+                if (existing == null) repository.addBeer(beer) else repository.updateBeer(beer)
+                existing = beer
+                val savedForm = f.copy(
+                    id = beer.id,
                     tried = beer.tried,
                     pairings = pairings.toSet(),
                     customPairing = "",
                     nameError = false,
                     gradeError = false,
+                    alcoholError = false,
+                    volumeError = false,
+                    priceError = false,
+                    saveState = SaveState.Saved,
+                    hasUnsavedChanges = false,
                     saved = true,
                 )
+                baseline = savedForm
+                _form.update { current ->
+                    if (current.formContent() == f.formContent()) {
+                        savedForm
+                    } else {
+                        val currentWithId = current.copy(id = beer.id)
+                        currentWithId.copy(
+                            saveState = SaveState.Saved,
+                            hasUnsavedChanges =
+                                currentWithId.formContent() != baseline.formContent(),
+                            saved = false,
+                        )
+                    }
+                }
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                _form.update {
+                    it.copy(
+                        saveState = SaveState.Error("Could not save beer"),
+                        saved = false,
+                    )
+                }
             }
         }
     }
@@ -160,3 +253,31 @@ class AddEditBeerViewModel(
         }
     }
 }
+
+private fun BeerFormState.withNumericValidation(): BeerFormState {
+    val alcohol = alcoholPercent.trim().replace(',', '.')
+    val alcoholValue = alcohol.toDoubleOrNull()
+    val volume = volumeMl.trim()
+    val volumeValue = volume.toIntOrNull()
+    val normalizedPrice = price.trim().replace(',', '.')
+    val priceValue = normalizedPrice.toDoubleOrNull()
+    return copy(
+        alcoholError = alcohol.isNotEmpty() &&
+            (alcoholValue == null || !alcoholValue.isFinite() || alcoholValue !in 0.0..100.0),
+        volumeError = volume.isNotEmpty() && (volumeValue == null || volumeValue <= 0),
+        priceError = normalizedPrice.isNotEmpty() &&
+            (priceValue == null || !priceValue.isFinite() || priceValue < 0.0),
+    )
+}
+
+private fun BeerFormState.formContent(): BeerFormState = copy(
+    nameError = false,
+    gradeError = false,
+    alcoholError = false,
+    volumeError = false,
+    priceError = false,
+    loadState = EditLoadState.Content,
+    saveState = SaveState.Idle,
+    hasUnsavedChanges = false,
+    saved = false,
+)

@@ -1,7 +1,16 @@
 package com.beertracker
 
+import com.beertracker.domain.BeerRepository
+import com.beertracker.domain.TriedBeer
 import com.beertracker.ui.AddEditBeerViewModel
+import com.beertracker.ui.EditLoadState
+import com.beertracker.ui.SaveState
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -33,7 +42,7 @@ class AddEditBeerViewModelTest {
         vm.update {
             it.copy(
                 name = "Punk IPA", brewery = "BrewDog", type = "IPA",
-                alcoholPercent = "5,6", volumeMl = "330", price = "29.50",
+                alcoholPercent = "5,6", volumeMl = "330", price = "29,50",
             )
         }
         vm.setGrade(9)
@@ -196,5 +205,236 @@ class AddEditBeerViewModelTest {
         vm.update { it.copy(name = "Edited") }
         vm.load("a")
         assertEquals("Edited", vm.form.value.name)
+    }
+
+    @Test
+    fun `edit load sets loading immediately and save is disabled while loading`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val repo = ControlledBeerRepository(
+            initialBeers = listOf(beer(id = "a", name = "Old Name")),
+            loadGate = gate,
+        )
+        val vm = AddEditBeerViewModel(repo)
+
+        vm.load("a")
+        vm.update { it.copy(name = "New Name") }
+        vm.save()
+
+        assertEquals(EditLoadState.Loading, vm.form.value.loadState)
+        assertEquals(0, repo.addCalls)
+        assertEquals(0, repo.updateCalls)
+        gate.complete(Unit)
+    }
+
+    @Test
+    fun `missing edit exposes not found and never creates a beer`() = runTest {
+        val repo = ControlledBeerRepository()
+        val vm = AddEditBeerViewModel(repo)
+
+        vm.load("missing")
+        vm.update { it.copy(name = "Must Not Be Added") }
+        vm.save()
+
+        assertEquals(EditLoadState.NotFound, vm.form.value.loadState)
+        assertEquals(0, repo.addCalls)
+        assertEquals(0, repo.updateCalls)
+        assertTrue(repo.observeBeers().first().isEmpty())
+    }
+
+    @Test
+    fun `edit load failure exposes a user consumable error`() = runTest {
+        val repo = ControlledBeerRepository(loadFailure = IllegalStateException("database unavailable"))
+        val vm = AddEditBeerViewModel(repo)
+
+        vm.load("a")
+
+        val state = vm.form.value.loadState as EditLoadState.Error
+        assertEquals("Could not load beer", state.message)
+    }
+
+    @Test
+    fun `alcohol validation is inline and accepts comma decimals`() {
+        val vm = AddEditBeerViewModel(FakeBeerRepository())
+
+        vm.update { it.copy(alcoholPercent = "101") }
+        assertTrue(vm.form.value.alcoholError)
+
+        vm.update { it.copy(alcoholPercent = "5,6") }
+        assertFalse(vm.form.value.alcoholError)
+    }
+
+    @Test
+    fun `alcohol validation rejects non numeric input`() {
+        val vm = AddEditBeerViewModel(FakeBeerRepository())
+
+        vm.update { it.copy(alcoholPercent = "strong") }
+
+        assertTrue(vm.form.value.alcoholError)
+    }
+
+    @Test
+    fun `volume validation requires a positive integer`() {
+        val vm = AddEditBeerViewModel(FakeBeerRepository())
+
+        vm.update { it.copy(volumeMl = "0") }
+        assertTrue(vm.form.value.volumeError)
+
+        vm.update { it.copy(volumeMl = "330.5") }
+        assertTrue(vm.form.value.volumeError)
+
+        vm.update { it.copy(volumeMl = "330") }
+        assertFalse(vm.form.value.volumeError)
+    }
+
+    @Test
+    fun `price validation rejects negative values and accepts dot decimals`() {
+        val vm = AddEditBeerViewModel(FakeBeerRepository())
+
+        vm.update { it.copy(price = "-1") }
+        assertTrue(vm.form.value.priceError)
+
+        vm.update { it.copy(price = "29.50") }
+        assertFalse(vm.form.value.priceError)
+    }
+
+    @Test
+    fun `blank numeric fields have no validation errors`() {
+        val vm = AddEditBeerViewModel(FakeBeerRepository())
+
+        vm.update { it.copy(alcoholPercent = " ", volumeMl = "", price = "  ") }
+
+        assertFalse(vm.form.value.alcoholError)
+        assertFalse(vm.form.value.volumeError)
+        assertFalse(vm.form.value.priceError)
+    }
+
+    @Test
+    fun `invalid numeric fields prevent save`() = runTest {
+        val repo = FakeBeerRepository()
+        val vm = AddEditBeerViewModel(repo)
+        vm.update { it.copy(name = "Invalid", alcoholPercent = "101") }
+
+        vm.save()
+
+        assertFalse(vm.form.value.saved)
+        assertTrue(repo.observeBeers().first().isEmpty())
+    }
+
+    @Test
+    fun `editing form fields tracks unsaved changes`() {
+        val vm = AddEditBeerViewModel(FakeBeerRepository())
+        assertFalse(vm.form.value.hasUnsavedChanges)
+
+        vm.update { it.copy(name = "Changed") }
+
+        assertTrue(vm.form.value.hasUnsavedChanges)
+    }
+
+    @Test
+    fun `loading an existing beer starts with no unsaved changes`() = runTest {
+        val repo = FakeBeerRepository()
+        repo.addBeer(beer(id = "a", name = "Falcon"))
+        val vm = AddEditBeerViewModel(repo)
+
+        vm.load("a")
+
+        assertFalse(vm.form.value.hasUnsavedChanges)
+    }
+
+    @Test
+    fun `successful save clears unsaved changes`() = runTest {
+        val vm = AddEditBeerViewModel(FakeBeerRepository())
+        vm.update { it.copy(name = "Falcon") }
+
+        vm.save()
+
+        assertFalse(vm.form.value.hasUnsavedChanges)
+    }
+
+    @Test
+    fun `save exposes saving state until repository completes`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val repo = ControlledBeerRepository(saveGate = gate)
+        val vm = AddEditBeerViewModel(repo)
+        vm.update { it.copy(name = "Falcon") }
+
+        vm.save()
+
+        assertEquals(SaveState.Saving, vm.form.value.saveState)
+        assertFalse(vm.form.value.saved)
+        gate.complete(Unit)
+        assertEquals(SaveState.Saved, vm.form.value.saveState)
+    }
+
+    @Test
+    fun `edits made while save is pending remain unsaved after completion`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val repo = ControlledBeerRepository(saveGate = gate)
+        val vm = AddEditBeerViewModel(repo)
+        vm.update { it.copy(name = "Falcon") }
+        vm.save()
+
+        vm.update { it.copy(name = "Falcon edited") }
+        gate.complete(Unit)
+
+        assertEquals("Falcon", repo.observeBeers().first().single().name)
+        assertEquals("Falcon edited", vm.form.value.name)
+        assertTrue(vm.form.value.hasUnsavedChanges)
+        assertFalse(vm.form.value.saved)
+    }
+
+    @Test
+    fun `save failure exposes error and retains unsaved changes`() = runTest {
+        val repo = ControlledBeerRepository(saveFailure = IllegalStateException("disk full"))
+        val vm = AddEditBeerViewModel(repo)
+        vm.update { it.copy(name = "Falcon") }
+
+        vm.save()
+
+        val state = vm.form.value.saveState as SaveState.Error
+        assertEquals("Could not save beer", state.message)
+        assertFalse(vm.form.value.saved)
+        assertTrue(vm.form.value.hasUnsavedChanges)
+    }
+}
+
+private class ControlledBeerRepository(
+    initialBeers: List<TriedBeer> = emptyList(),
+    private val loadGate: CompletableDeferred<Unit>? = null,
+    private val saveGate: CompletableDeferred<Unit>? = null,
+    private val loadFailure: Throwable? = null,
+    private val saveFailure: Throwable? = null,
+) : BeerRepository {
+    private val beers = MutableStateFlow(initialBeers.associateBy { it.id })
+
+    var addCalls: Int = 0
+        private set
+    var updateCalls: Int = 0
+        private set
+
+    override fun observeBeers(): Flow<List<TriedBeer>> = beers.map { it.values.toList() }
+
+    override suspend fun getBeer(id: String): TriedBeer? {
+        loadGate?.await()
+        loadFailure?.let { throw it }
+        return beers.value[id]
+    }
+
+    override suspend fun addBeer(beer: TriedBeer) {
+        addCalls += 1
+        saveGate?.await()
+        saveFailure?.let { throw it }
+        beers.update { it + (beer.id to beer) }
+    }
+
+    override suspend fun updateBeer(beer: TriedBeer) {
+        updateCalls += 1
+        saveGate?.await()
+        saveFailure?.let { throw it }
+        beers.update { it + (beer.id to beer) }
+    }
+
+    override suspend fun deleteBeer(id: String) {
+        beers.update { it - id }
     }
 }
