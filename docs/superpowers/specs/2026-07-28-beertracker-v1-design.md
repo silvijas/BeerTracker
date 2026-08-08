@@ -191,7 +191,37 @@ grade, so a saved beer always lands in one of the three legal states.
   fill matched fields.
 - Images are fetched on demand from their URLs, never bundled (bundling all
   images would be hundreds of MB).
-- The snapshot is refreshed by rebuilding and shipping a new app version.
+- The bundled snapshot is only a starting point; the app refreshes the catalog
+  by itself (see Phase 2 details below).
+
+### Phase 2 details (added 2026-08-08)
+
+- The app ships with a bundled beer-only seed snapshot
+  (assets/catalog/beers.json, about 1,500 beers) imported into a separate
+  read-only catalog database at first launch, so in-store lookups work offline
+  from the first run. There are zero user-owned setup steps for the catalog:
+  no accounts, no keys to enter, no pipeline to run.
+- The catalog refreshes itself from inside the app. On launch, if the last
+  refresh is at least a week old and the network is available, the app fetches
+  the current beer assortment silently in the background. An "Update beer
+  catalog" action on the overview screen runs the same refresh on demand and
+  shows the date of the last update.
+- A refresh replaces the catalog only after a complete, plausible fetch has
+  succeeded; on any failure the previous catalog stays exactly as it was, so
+  the last good catalog always wins. A refresh rewrites only the catalog
+  database. User beers are never deleted or modified by it: each saved beer
+  keeps its own copies of the catalog fields, including its own image URL.
+- When a scanned or typed article number fills the add form, the product's
+  image URL is copied onto the user's beer record at that moment, and the
+  detail screen loads the image from that stored URL on demand. Images are
+  never bundled.
+- The fetch is polite: sequential pages of 30 products with a small delay
+  between requests, stopping at the first empty page. The product-search key
+  the app sends is the public key from Systembolaget's own website JavaScript;
+  every visitor's browser already sends it in the open, so shipping it inside
+  the APK is not treated as handling a secret.
+- Regenerating the bundled seed with scripts/fetch_catalog.py is a development
+  task for shipping a fresher starting point, not part of routine use.
 
 ## 8. Tech stack
 
