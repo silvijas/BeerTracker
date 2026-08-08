@@ -1,5 +1,6 @@
 package com.beertracker
 
+import com.beertracker.domain.CatalogProduct
 import com.beertracker.domain.TriedBeer
 
 fun beer(
@@ -36,4 +37,28 @@ fun beer(
     dateAdded = dateAdded,
     catalogArticleNumber = null,
     addedBy = null,
+)
+
+fun catalogProduct(
+    articleNumber: String = "1324515",
+    articleNumberShort: String? = "13245",
+    name: String = "Omnipollo Prodigal Pale Ale",
+    brewery: String = "Omnipollo",
+    type: String = "Ale",
+    alcoholPercent: Double? = 5.2,
+    volumeMl: Int? = 330,
+    price: Double? = 25.9,
+    country: String? = "Sverige",
+    imageUrl: String? = "https://product-cdn.systembolaget.se/productimages/50786609/50786609",
+) = CatalogProduct(
+    articleNumber = articleNumber,
+    articleNumberShort = articleNumberShort,
+    name = name,
+    brewery = brewery,
+    type = type,
+    alcoholPercent = alcoholPercent,
+    volumeMl = volumeMl,
+    price = price,
+    country = country,
+    imageUrl = imageUrl,
 )
