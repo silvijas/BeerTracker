@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.beertracker.BeerApp
 import com.beertracker.domain.BeerRepository
+import com.beertracker.domain.CatalogRepository
 import com.beertracker.domain.Presets
 import com.beertracker.domain.TriedBeer
 import java.util.UUID
@@ -50,6 +51,8 @@ data class BeerFormState(
     val customPairing: String = "",
     val buyAgain: Boolean = false,
     val favourite: Boolean = false,
+    val catalogArticleNumber: String? = null,
+    val imageUrl: String? = null,
     val nameError: Boolean = false,
     val gradeError: Boolean = false,
     val alcoholError: Boolean = false,
@@ -63,6 +66,7 @@ data class BeerFormState(
 
 class AddEditBeerViewModel(
     private val repository: BeerRepository,
+    private val catalogRepository: CatalogRepository? = null,
     private val clock: () -> Long = { System.currentTimeMillis() },
 ) : ViewModel() {
 
@@ -81,6 +85,7 @@ class AddEditBeerViewModel(
 
     private var existing: TriedBeer? = null
     private var loadedBeerId: String? = null
+    private var prefilledArticle: String? = null
     private var baseline = BeerFormState()
 
     fun load(beerId: String) {
@@ -118,6 +123,8 @@ class AddEditBeerViewModel(
                     note = loaded.note,
                     aftertaste = loaded.aftertaste,
                     pairings = loaded.goesWellWith.toSet(),
+                    catalogArticleNumber = loaded.catalogArticleNumber,
+                    imageUrl = loaded.imageUrl,
                     buyAgain = loaded.buyAgain,
                     favourite = loaded.favourite,
                     loadState = EditLoadState.Content,
@@ -132,6 +139,41 @@ class AddEditBeerViewModel(
                         hasUnsavedChanges = false,
                     )
                 }
+            }
+        }
+    }
+
+    /**
+     * Fills an empty add form from a catalog product. The product's fields,
+     * article number, and display image URL are copied onto the form, so
+     * saving gives the user's beer its own copies; later catalog refreshes
+     * never change a saved beer. Runs at most once per article number, so a
+     * configuration change cannot overwrite the user's edits. Unknown
+     * numbers leave the form as it was.
+     */
+    fun prefillFromCatalog(articleNumber: String) {
+        val catalog = catalogRepository ?: return
+        if (prefilledArticle == articleNumber) return
+        prefilledArticle = articleNumber
+        viewModelScope.launch {
+            try {
+                val product = catalog.findByArticleNumber(articleNumber) ?: return@launch
+                val prefilled = BeerFormState(
+                    name = product.name,
+                    brewery = product.brewery,
+                    type = product.type,
+                    alcoholPercent = product.alcoholPercent?.toString() ?: "",
+                    volumeMl = product.volumeMl?.toString() ?: "",
+                    price = product.price?.toString() ?: "",
+                    catalogArticleNumber = product.articleNumber,
+                    imageUrl = product.displayImageUrl,
+                )
+                _form.value = prefilled.copy(
+                    hasUnsavedChanges = prefilled.formContent() != baseline.formContent(),
+                )
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                // A failed lookup leaves the empty manual form usable.
             }
         }
     }
@@ -196,9 +238,9 @@ class AddEditBeerViewModel(
             buyAgain = f.buyAgain,
             favourite = f.favourite,
             dateAdded = existing?.dateAdded ?: clock(),
-            catalogArticleNumber = existing?.catalogArticleNumber,
+            catalogArticleNumber = f.catalogArticleNumber,
             addedBy = existing?.addedBy,
-            imageUrl = existing?.imageUrl,
+            imageUrl = f.imageUrl,
         )
         _form.update { it.copy(saveState = SaveState.Saving, saved = false) }
         viewModelScope.launch {
@@ -249,7 +291,7 @@ class AddEditBeerViewModel(
         val Factory = viewModelFactory {
             initializer {
                 val app = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as BeerApp
-                AddEditBeerViewModel(app.container.beerRepository)
+                AddEditBeerViewModel(app.container.beerRepository, app.container.catalogRepository)
             }
         }
     }

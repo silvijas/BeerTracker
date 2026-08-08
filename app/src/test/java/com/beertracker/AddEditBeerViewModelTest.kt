@@ -396,6 +396,108 @@ class AddEditBeerViewModelTest {
         assertFalse(vm.form.value.saved)
         assertTrue(vm.form.value.hasUnsavedChanges)
     }
+
+    @Test
+    fun `prefill from catalog fills the form and marks unsaved changes`() = runTest {
+        val catalog = FakeCatalogRepository().apply { add(catalogProduct()) }
+        val vm = AddEditBeerViewModel(FakeBeerRepository(), catalog)
+
+        vm.prefillFromCatalog("1324515")
+
+        val form = vm.form.value
+        assertEquals("Omnipollo Prodigal Pale Ale", form.name)
+        assertEquals("Omnipollo", form.brewery)
+        assertEquals("Ale", form.type)
+        assertEquals("5.2", form.alcoholPercent)
+        assertEquals("330", form.volumeMl)
+        assertEquals("25.9", form.price)
+        assertEquals("1324515", form.catalogArticleNumber)
+        assertEquals(
+            "https://product-cdn.systembolaget.se/productimages/50786609/50786609_400.jpg",
+            form.imageUrl,
+        )
+        assertNull(form.grade)
+        assertFalse(form.tried)
+        assertTrue(form.hasUnsavedChanges)
+    }
+
+    @Test
+    fun `prefill accepts the short shelf number`() = runTest {
+        val catalog = FakeCatalogRepository().apply { add(catalogProduct()) }
+        val vm = AddEditBeerViewModel(FakeBeerRepository(), catalog)
+
+        vm.prefillFromCatalog("13245")
+
+        assertEquals("1324515", vm.form.value.catalogArticleNumber)
+    }
+
+    @Test
+    fun `prefill with an unknown number leaves the form untouched`() = runTest {
+        val catalog = FakeCatalogRepository()
+        val vm = AddEditBeerViewModel(FakeBeerRepository(), catalog)
+
+        vm.prefillFromCatalog("999999")
+
+        assertEquals("", vm.form.value.name)
+        assertNull(vm.form.value.catalogArticleNumber)
+        assertFalse(vm.form.value.hasUnsavedChanges)
+    }
+
+    @Test
+    fun `saving a prefilled beer stores the catalog link and image url`() = runTest {
+        val repo = FakeBeerRepository()
+        val catalog = FakeCatalogRepository().apply { add(catalogProduct()) }
+        val vm = AddEditBeerViewModel(repo, catalog)
+
+        vm.prefillFromCatalog("1324515")
+        vm.setGrade(8)
+        vm.save()
+
+        val saved = repo.observeBeers().first().single()
+        assertEquals("Omnipollo Prodigal Pale Ale", saved.name)
+        assertEquals("1324515", saved.catalogArticleNumber)
+        assertEquals(
+            "https://product-cdn.systembolaget.se/productimages/50786609/50786609_400.jpg",
+            saved.imageUrl,
+        )
+        assertEquals(8, saved.grade)
+        assertTrue(saved.tried)
+    }
+
+    @Test
+    fun `prefill runs once per article number and never overwrites edits`() = runTest {
+        val catalog = FakeCatalogRepository().apply { add(catalogProduct()) }
+        val vm = AddEditBeerViewModel(FakeBeerRepository(), catalog)
+
+        vm.prefillFromCatalog("1324515")
+        vm.update { it.copy(name = "My own name") }
+        vm.prefillFromCatalog("1324515")
+
+        assertEquals("My own name", vm.form.value.name)
+    }
+
+    @Test
+    fun `loading an existing beer carries its image url through an edit and save`() = runTest {
+        val repo = FakeBeerRepository()
+        repo.addBeer(
+            beer(id = "a", imageUrl = "https://product-cdn.systembolaget.se/productimages/1/1_400.jpg"),
+        )
+        val vm = AddEditBeerViewModel(repo)
+
+        vm.load("a")
+        assertEquals(
+            "https://product-cdn.systembolaget.se/productimages/1/1_400.jpg",
+            vm.form.value.imageUrl,
+        )
+
+        vm.update { it.copy(note = "still great") }
+        vm.save()
+
+        assertEquals(
+            "https://product-cdn.systembolaget.se/productimages/1/1_400.jpg",
+            repo.getBeer("a")?.imageUrl,
+        )
+    }
 }
 
 private class ControlledBeerRepository(
