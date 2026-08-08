@@ -1,5 +1,7 @@
 package com.beertracker
 
+import android.app.Application
+import com.beertracker.domain.CatalogRefresher
 import com.beertracker.domain.CatalogStatus
 import com.beertracker.domain.RefreshResult
 import com.beertracker.ui.CatalogRefreshUiState
@@ -13,7 +15,12 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(application = Application::class, sdk = [35])
 class CatalogRefreshViewModelTest {
 
     @get:Rule
@@ -55,6 +62,23 @@ class CatalogRefreshViewModelTest {
             result = RefreshResult.Failure("Could not reach the Systembolaget catalog")
         }
         val vm = viewModel(refresher = refresher)
+
+        vm.refresh()
+
+        assertEquals(
+            CatalogRefreshUiState.Done(
+                RefreshResult.Failure("Could not reach the Systembolaget catalog"),
+            ),
+            vm.refreshState.value,
+        )
+    }
+
+    @Test
+    fun `an unexpected exception from refresh lands on the calm failure state`() = runTest {
+        val throwingRefresher = object : CatalogRefresher {
+            override suspend fun refresh(): RefreshResult = throw RuntimeException("boom")
+        }
+        val vm = CatalogRefreshViewModel(FakeCatalogRepository(), throwingRefresher)
 
         vm.refresh()
 

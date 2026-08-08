@@ -1,5 +1,6 @@
 package com.beertracker.ui
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -10,6 +11,7 @@ import com.beertracker.domain.CatalogRefresher
 import com.beertracker.domain.CatalogRepository
 import com.beertracker.domain.CatalogStatus
 import com.beertracker.domain.RefreshResult
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -38,7 +40,15 @@ class CatalogRefreshViewModel(
         if (_refreshState.value == CatalogRefreshUiState.Refreshing) return
         _refreshState.value = CatalogRefreshUiState.Refreshing
         viewModelScope.launch {
-            _refreshState.value = CatalogRefreshUiState.Done(catalogRefresher.refresh())
+            _refreshState.value = try {
+                CatalogRefreshUiState.Done(catalogRefresher.refresh())
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                Log.w(TAG, "Catalog refresh failed unexpectedly, keeping the previous catalog", error)
+                CatalogRefreshUiState.Done(
+                    RefreshResult.Failure("Could not reach the Systembolaget catalog"),
+                )
+            }
         }
     }
 
@@ -50,6 +60,8 @@ class CatalogRefreshViewModel(
     }
 
     companion object {
+        private const val TAG = "CatalogRefreshViewModel"
+
         val Factory = viewModelFactory {
             initializer {
                 val app = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as BeerApp
