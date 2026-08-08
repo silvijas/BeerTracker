@@ -63,6 +63,9 @@ android {
     testOptions {
         unitTests.isIncludeAndroidResources = true
     }
+    // Schemas ride the debug variant's assets because AGP 8.7.3 does not merge the test
+    // source set's assets into apk-for-local-test.ap_, verified in this project. This must
+    // stay on the debug source set only so schema JSON files never enter a release APK.
     sourceSets {
         getByName("debug") {
             assets.srcDirs("schemas")
