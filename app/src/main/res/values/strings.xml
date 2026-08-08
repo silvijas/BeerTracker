@@ -110,4 +110,10 @@
     <string name="scan_not_found_message">Number %1$s is not in the beer catalog. Check the digits or add the beer manually.</string>
     <string name="scan_again">Scan again</string>
     <string name="scan_found">Found %1$s</string>
+    <string name="update_catalog">Update beer catalog</string>
+    <string name="update_now">Update now</string>
+    <string name="catalog_status_unknown">The catalog is still being prepared.</string>
+    <string name="catalog_status_bundled">Using the bundled catalog, %1$d beers. Not updated yet.</string>
+    <string name="catalog_status_updated">Updated %1$s, %2$d beers.</string>
+    <string name="catalog_updated_message">Catalog updated, %1$d beers</string>
 </resources>

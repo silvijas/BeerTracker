@@ -13,6 +13,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.beertracker.ui.AddEditBeerViewModel
 import com.beertracker.ui.AddEditScreen
+import com.beertracker.ui.CatalogRefreshViewModel
 import com.beertracker.ui.DetailScreen
 import com.beertracker.ui.DetailViewModel
 import com.beertracker.ui.OverviewScreen
@@ -40,6 +41,7 @@ fun BeerNavHost() {
         composable("overview") {
             OverviewScreen(
                 viewModel = viewModel(factory = OverviewViewModel.Factory),
+                catalogViewModel = viewModel(factory = CatalogRefreshViewModel.Factory),
                 onAddClick = { navController.navigate("edit") },
                 onBeerClick = { id -> navController.navigate("detail/$id") },
                 onScanClick = { navController.navigate("scan") },

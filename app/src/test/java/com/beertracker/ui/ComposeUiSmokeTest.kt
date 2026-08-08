@@ -17,6 +17,8 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.beertracker.FakeBeerRepository
+import com.beertracker.FakeCatalogRefresher
+import com.beertracker.FakeCatalogRepository
 import com.beertracker.MainDispatcherRule
 import com.beertracker.domain.BeerRepository
 import com.beertracker.domain.TriedBeer
@@ -138,6 +140,10 @@ class ComposeUiSmokeTest {
                 } else {
                     OverviewScreen(
                         viewModel = viewModel,
+                        catalogViewModel = CatalogRefreshViewModel(
+                            FakeCatalogRepository(),
+                            FakeCatalogRefresher(),
+                        ),
                         onAddClick = { addInvoked = true },
                         onBeerClick = {},
                     )
@@ -177,6 +183,10 @@ class ComposeUiSmokeTest {
             BeerTrackerTheme {
                 OverviewScreen(
                     viewModel = viewModel,
+                    catalogViewModel = CatalogRefreshViewModel(
+                        FakeCatalogRepository(),
+                        FakeCatalogRefresher(),
+                    ),
                     onAddClick = {},
                     onBeerClick = {},
                 )
@@ -200,6 +210,10 @@ class ComposeUiSmokeTest {
                 } else {
                     OverviewScreen(
                         viewModel = viewModel,
+                        catalogViewModel = CatalogRefreshViewModel(
+                            FakeCatalogRepository(),
+                            FakeCatalogRefresher(),
+                        ),
                         onAddClick = {},
                         onBeerClick = {},
                         onScanClick = { scanInvoked = true },
