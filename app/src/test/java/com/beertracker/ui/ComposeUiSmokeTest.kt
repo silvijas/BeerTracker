@@ -188,6 +188,30 @@ class ComposeUiSmokeTest {
         composeRule.onNodeWithText("Your cellar is ready").assertIsDisplayed()
     }
 
+    @Test
+    fun `overview scan action invokes the scan callback`() {
+        val viewModel = OverviewViewModel(FakeBeerRepository())
+
+        composeRule.setContent {
+            BeerTrackerTheme {
+                var scanInvoked by remember { mutableStateOf(false) }
+                if (scanInvoked) {
+                    Text("Scan action invoked")
+                } else {
+                    OverviewScreen(
+                        viewModel = viewModel,
+                        onAddClick = {},
+                        onBeerClick = {},
+                        onScanClick = { scanInvoked = true },
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("Scan").performClick()
+        composeRule.onNodeWithText("Scan action invoked").assertIsDisplayed()
+    }
+
     private fun beerWithoutSubtitle() = TriedBeer(
         id = "beer",
         name = "Cellar lager",

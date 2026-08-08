@@ -59,6 +59,7 @@ fun OverviewScreen(
     viewModel: OverviewViewModel,
     onAddClick: () -> Unit,
     onBeerClick: (String) -> Unit,
+    onScanClick: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -67,6 +68,11 @@ fun OverviewScreen(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.app_name)) },
+                actions = {
+                    TextButton(onClick = onScanClick) {
+                        Text(stringResource(R.string.scan_action))
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
                 ),

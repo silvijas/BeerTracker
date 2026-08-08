@@ -17,6 +17,8 @@ import com.beertracker.ui.DetailScreen
 import com.beertracker.ui.DetailViewModel
 import com.beertracker.ui.OverviewScreen
 import com.beertracker.ui.OverviewViewModel
+import com.beertracker.ui.scan.ScanScreen
+import com.beertracker.ui.scan.ScanViewModel
 import com.beertracker.ui.theme.BeerTrackerTheme
 
 class MainActivity : ComponentActivity() {
@@ -40,20 +42,40 @@ fun BeerNavHost() {
                 viewModel = viewModel(factory = OverviewViewModel.Factory),
                 onAddClick = { navController.navigate("edit") },
                 onBeerClick = { id -> navController.navigate("detail/$id") },
+                onScanClick = { navController.navigate("scan") },
             )
         }
         composable(
-            route = "edit?beerId={beerId}",
-            arguments = listOf(navArgument("beerId") {
-                type = NavType.StringType
-                nullable = true
-                defaultValue = null
-            }),
+            route = "edit?beerId={beerId}&prefillArticle={prefillArticle}",
+            arguments = listOf(
+                navArgument("beerId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("prefillArticle") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+            ),
         ) { backStackEntry ->
             AddEditScreen(
                 viewModel = viewModel(factory = AddEditBeerViewModel.Factory),
                 beerId = backStackEntry.arguments?.getString("beerId"),
+                prefillArticle = backStackEntry.arguments?.getString("prefillArticle"),
                 onDone = { navController.popBackStack() },
+            )
+        }
+        composable("scan") {
+            ScanScreen(
+                viewModel = viewModel(factory = ScanViewModel.Factory),
+                onFound = { articleNumber ->
+                    navController.navigate("edit?prefillArticle=$articleNumber") {
+                        popUpTo("scan") { inclusive = true }
+                    }
+                },
+                onBack = { navController.popBackStack() },
             )
         }
         composable("detail/{beerId}") { backStackEntry ->

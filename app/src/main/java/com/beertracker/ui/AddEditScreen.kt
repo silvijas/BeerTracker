@@ -77,10 +77,16 @@ internal fun backNavigationAction(
 fun AddEditScreen(
     viewModel: AddEditBeerViewModel,
     beerId: String?,
+    prefillArticle: String? = null,
     onDone: () -> Unit,
 ) {
     LaunchedEffect(beerId) {
         if (beerId != null) viewModel.load(beerId)
+    }
+    LaunchedEffect(prefillArticle) {
+        if (beerId == null && prefillArticle != null) {
+            viewModel.prefillFromCatalog(prefillArticle)
+        }
     }
     val form by viewModel.form.collectAsStateWithLifecycle()
     val typeOptions by viewModel.typeOptions.collectAsStateWithLifecycle()

@@ -95,4 +95,19 @@
     <string name="no_pairings">No pairings recorded.</string>
     <string name="detail_error_title">Could not open this beer</string>
     <string name="detail_error_message">Return to the cellar and try again.</string>
+    <string name="scan_action">Scan</string>
+    <string name="scan_title">Scan shelf label</string>
+    <string name="scan_hint">Point the camera at the shelf label. The article number is picked up automatically.</string>
+    <string name="camera_waiting">Waiting for camera permission.</string>
+    <string name="camera_denied_title">Camera unavailable</string>
+    <string name="camera_denied_message">Scanning needs the camera. Allow camera access in system settings, or type the article number below.</string>
+    <string name="manual_lookup_section">Type the number</string>
+    <string name="manual_lookup_help">The article number is the number printed on the shelf label.</string>
+    <string name="article_number_label">Article number</string>
+    <string name="look_up">Look up</string>
+    <string name="searching_catalog">Searching the catalog</string>
+    <string name="scan_not_found_title">No catalog match</string>
+    <string name="scan_not_found_message">Number %1$s is not in the beer catalog. Check the digits or add the beer manually.</string>
+    <string name="scan_again">Scan again</string>
+    <string name="scan_found">Found %1$s</string>
 </resources>
