@@ -498,6 +498,41 @@ class AddEditBeerViewModelTest {
             repo.getBeer("a")?.imageUrl,
         )
     }
+
+    @Test
+    fun `prefill from catalog is ignored while an edit session is loaded`() = runTest {
+        val repo = FakeBeerRepository()
+        repo.addBeer(beer(id = "a", name = "Loaded Beer", grade = 6))
+        val catalog = FakeCatalogRepository().apply { add(catalogProduct()) }
+        val vm = AddEditBeerViewModel(repo, catalog)
+
+        vm.load("a")
+        vm.prefillFromCatalog("1324515")
+
+        assertEquals("Loaded Beer", vm.form.value.name)
+        assertEquals(6, vm.form.value.grade)
+        assertTrue(vm.form.value.tried)
+
+        vm.save()
+
+        val saved = repo.observeBeers().first().single()
+        assertEquals("a", saved.id)
+        assertEquals("Loaded Beer", saved.name)
+    }
+
+    @Test
+    fun `load wins when it starts right after a prefill lookup`() = runTest {
+        val repo = FakeBeerRepository()
+        repo.addBeer(beer(id = "a", name = "Loaded Beer", grade = 6))
+        val catalog = FakeCatalogRepository().apply { add(catalogProduct()) }
+        val vm = AddEditBeerViewModel(repo, catalog)
+
+        vm.prefillFromCatalog("1324515")
+        vm.load("a")
+
+        assertEquals("a", vm.form.value.id)
+        assertEquals("Loaded Beer", vm.form.value.name)
+    }
 }
 
 private class ControlledBeerRepository(

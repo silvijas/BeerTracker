@@ -153,11 +153,13 @@ class AddEditBeerViewModel(
      */
     fun prefillFromCatalog(articleNumber: String) {
         val catalog = catalogRepository ?: return
+        if (loadedBeerId != null) return
         if (prefilledArticle == articleNumber) return
         prefilledArticle = articleNumber
         viewModelScope.launch {
             try {
                 val product = catalog.findByArticleNumber(articleNumber) ?: return@launch
+                if (loadedBeerId != null) return@launch
                 val prefilled = BeerFormState(
                     name = product.name,
                     brewery = product.brewery,
