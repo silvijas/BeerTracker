@@ -45,7 +45,11 @@ class ScanViewModel(private val catalogRepository: CatalogRepository) : ViewMode
             for (number in newCandidates) {
                 if (_uiState.value is ScanUiState.Found) return@launch
                 val product = catalogRepository.findByArticleNumber(number)
-                if (product != null) {
+                // Re-checked immediately before the write: another lookup
+                // (a later candidate in this same sweep, or a concurrent
+                // manual lookup) may have already settled on Found while
+                // this suspending call was in flight.
+                if (product != null && _uiState.value !is ScanUiState.Found) {
                     _uiState.value = ScanUiState.Found(product)
                     return@launch
                 }
@@ -56,10 +60,19 @@ class ScanViewModel(private val catalogRepository: CatalogRepository) : ViewMode
     /** The typed fallback path. Unlike the camera feed, a miss is reported. */
     fun onManualLookup(input: String) {
         val number = input.trim()
-        if (number.isEmpty() || _uiState.value == ScanUiState.Searching) return
+        if (number.isEmpty() ||
+            _uiState.value is ScanUiState.Found ||
+            _uiState.value == ScanUiState.Searching
+        ) {
+            return
+        }
         _uiState.value = ScanUiState.Searching
         viewModelScope.launch {
             val product = catalogRepository.findByArticleNumber(number)
+            // Re-checked immediately before the write: a concurrent camera
+            // detection may have already settled on Found while this
+            // suspending call was in flight, and that first hit must stand.
+            if (_uiState.value is ScanUiState.Found) return@launch
             _uiState.value = if (product != null) {
                 ScanUiState.Found(product)
             } else {

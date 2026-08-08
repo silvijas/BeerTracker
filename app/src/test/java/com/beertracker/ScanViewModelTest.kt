@@ -57,6 +57,18 @@ class ScanViewModelTest {
     }
 
     @Test
+    fun `manual lookup after found leaves the found product unchanged`() = runTest {
+        val catalog = catalogWithSample().apply {
+            add(catalogProduct(articleNumber = "1000501", articleNumberShort = "10005", name = "Other"))
+        }
+        val vm = ScanViewModel(catalog)
+        vm.onTextDetected("13245")
+        assertTrue(vm.uiState.value is ScanUiState.Found)
+        vm.onManualLookup("10005")
+        assertEquals("1324515", (vm.uiState.value as ScanUiState.Found).product.articleNumber)
+    }
+
+    @Test
     fun `manual lookup reports a miss with the typed number`() = runTest {
         val vm = ScanViewModel(catalogWithSample())
         vm.onManualLookup(" 99999 ")

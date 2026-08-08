@@ -22,6 +22,16 @@ class ArticleNumberParserTest {
     }
 
     @Test
+    fun `accepts a bare four digit run`() {
+        assertEquals(listOf("1017"), ArticleNumberParser.extractCandidates("1017"))
+    }
+
+    @Test
+    fun `rejects a bare three digit run`() {
+        assertEquals(emptyList<String>(), ArticleNumberParser.extractCandidates("101"))
+    }
+
+    @Test
     fun `ignores longer runs like ean barcodes`() {
         assertEquals(
             emptyList<String>(),
