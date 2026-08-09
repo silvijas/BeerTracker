@@ -1,6 +1,7 @@
 package com.beertracker.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -31,6 +32,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -45,14 +47,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.beertracker.R
+import com.beertracker.domain.CatalogProduct
 import com.beertracker.ui.components.BeerCan
 import com.beertracker.ui.components.ErrorState
 import com.beertracker.ui.components.FlagToggleRow
@@ -94,6 +99,7 @@ fun AddEditScreen(
     val form by viewModel.form.collectAsStateWithLifecycle()
     val typeOptions by viewModel.typeOptions.collectAsStateWithLifecycle()
     val pairingOptions by viewModel.pairingOptions.collectAsStateWithLifecycle()
+    val suggestions by viewModel.catalogSuggestions.collectAsStateWithLifecycle()
     var showDiscardDialog by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val saveErrorMessage = stringResource(R.string.save_error_message)
@@ -211,6 +217,8 @@ fun AddEditScreen(
                     form = form,
                     typeOptions = typeOptions,
                     pairingOptions = pairingOptions,
+                    suggestions = if (beerId == null) suggestions else emptyList(),
+                    onPickSuggestion = viewModel::applyCatalogProduct,
                     enabled = !busy,
                     onUpdate = viewModel::update,
                     onSetTried = viewModel::setTried,
@@ -249,6 +257,8 @@ private fun BeerForm(
     form: BeerFormState,
     typeOptions: List<String>,
     pairingOptions: List<String>,
+    suggestions: List<CatalogProduct>,
+    onPickSuggestion: (CatalogProduct) -> Unit,
     enabled: Boolean,
     onUpdate: ((BeerFormState) -> BeerFormState) -> Unit,
     onSetTried: (Boolean) -> Unit,
@@ -263,6 +273,7 @@ private fun BeerForm(
         verticalArrangement = Arrangement.spacedBy(BeerTrackerSpacing.medium),
     ) {
         SectionHeader(stringResource(R.string.basics_section))
+        var nameFocused by remember { mutableStateOf(false) }
         OutlinedTextField(
             value = form.name,
             onValueChange = { value -> onUpdate { it.copy(name = value, nameError = false) } },
@@ -273,8 +284,13 @@ private fun BeerForm(
             },
             enabled = enabled,
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { nameFocused = it.isFocused },
         )
+        if (nameFocused && suggestions.isNotEmpty()) {
+            CatalogSuggestionCard(suggestions = suggestions, onPick = onPickSuggestion)
+        }
         ResponsiveFieldPair(
             first = {
                 OutlinedTextField(
@@ -485,6 +501,58 @@ private fun GradeCanPicker(
                         ) {
                             BeerCan(filled = false, height = 34.dp, alpha = 0.4f)
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CatalogSuggestionCard(
+    suggestions: List<CatalogProduct>,
+    onPick: (CatalogProduct) -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+    ) {
+        Column {
+            suggestions.forEach { product ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onPick(product) }
+                        .padding(
+                            horizontal = BeerTrackerSpacing.medium,
+                            vertical = BeerTrackerSpacing.small,
+                        ),
+                    horizontalArrangement = Arrangement.spacedBy(BeerTrackerSpacing.medium),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = product.name,
+                            style = MaterialTheme.typography.titleSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (product.brewery.isNotBlank()) {
+                            Text(
+                                text = product.brewery,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                    product.price?.let {
+                        Text(
+                            text = stringResource(R.string.price_value, it.toString()),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
                     }
                 }
             }
