@@ -15,6 +15,9 @@ interface CatalogDao {
     )
     suspend fun findByNumber(number: String): CatalogBeerEntity?
 
+    @Query("SELECT * FROM catalog_beers")
+    fun observeAll(): Flow<List<CatalogBeerEntity>>
+
     @Query("SELECT COUNT(*) FROM catalog_beers")
     suspend fun count(): Int
 

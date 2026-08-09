@@ -17,5 +17,8 @@ interface CatalogRepository {
      */
     suspend fun findByArticleNumber(raw: String): CatalogProduct?
 
+    /** Streams the whole catalog. Room re-emits automatically after refreshes. */
+    fun observeProducts(): Flow<List<CatalogProduct>>
+
     fun observeStatus(): Flow<CatalogStatus?>
 }

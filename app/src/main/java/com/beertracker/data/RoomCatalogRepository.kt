@@ -24,6 +24,9 @@ class RoomCatalogRepository(private val dao: CatalogDao) : CatalogRepository {
         return null
     }
 
+    override fun observeProducts(): Flow<List<CatalogProduct>> =
+        dao.observeAll().map { entities -> entities.map { it.toDomain() } }
+
     override fun observeStatus(): Flow<CatalogStatus?> =
         dao.observeMetadata().map { metadata ->
             metadata?.let {

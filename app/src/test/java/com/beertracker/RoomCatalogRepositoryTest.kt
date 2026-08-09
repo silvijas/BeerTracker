@@ -78,6 +78,24 @@ class RoomCatalogRepositoryTest {
     }
 
     @Test
+    fun `observeProducts emits every catalog row and reflects new imports`() = runTest {
+        assertEquals(
+            listOf("Omnipollo Prodigal Pale Ale", "Second Beer"),
+            repo.observeProducts().first().map { it.name }.sorted(),
+        )
+        db.catalogDao().insertAll(
+            listOf(
+                catalogProduct(
+                    articleNumber = "7700101",
+                    articleNumberShort = "77001",
+                    name = "Third Beer",
+                ).toEntity(),
+            ),
+        )
+        assertEquals(3, repo.observeProducts().first().size)
+    }
+
+    @Test
     fun `status is null before metadata exists and mirrors it afterwards`() = runTest {
         assertNull(repo.observeStatus().first())
         db.catalogDao().setMetadata(
