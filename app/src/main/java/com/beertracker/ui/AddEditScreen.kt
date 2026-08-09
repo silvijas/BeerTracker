@@ -1,8 +1,8 @@
 package com.beertracker.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -13,9 +13,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -42,17 +42,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.beertracker.R
+import com.beertracker.ui.components.BeerCan
 import com.beertracker.ui.components.ErrorState
 import com.beertracker.ui.components.FlagToggleRow
-import com.beertracker.ui.components.GradeMark
 import com.beertracker.ui.components.LoadingState
 import com.beertracker.ui.components.SectionHeader
 import com.beertracker.ui.theme.BeerTrackerSpacing
@@ -354,34 +357,11 @@ private fun BeerForm(
             stringResource(R.string.grade_scale_title),
             style = MaterialTheme.typography.titleMedium,
         )
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(BeerTrackerSpacing.small),
-            verticalArrangement = Arrangement.spacedBy(BeerTrackerSpacing.small),
-        ) {
-            (5..10).forEach { grade ->
-                val selected = form.grade == grade
-                GradeMark(
-                    grade = grade,
-                    tried = true,
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .then(
-                            if (selected) {
-                                Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                            } else {
-                                Modifier
-                            },
-                        )
-                        .selectable(
-                            selected = selected,
-                            enabled = enabled,
-                            role = Role.RadioButton,
-                            onClick = { onSetGrade(if (selected) null else grade) },
-                        ),
-                    size = 48.dp,
-                )
-            }
-        }
+        GradeCanPicker(
+            grade = form.grade,
+            enabled = enabled,
+            onSetGrade = onSetGrade,
+        )
         if (form.gradeError) {
             Text(
                 stringResource(R.string.grade_error),
@@ -460,6 +440,55 @@ private fun BeerForm(
             onCheckedChange = { value -> onUpdate { it.copy(favourite = value) } },
             enabled = enabled,
         )
+    }
+}
+
+/**
+ * Ten-can grade track in two rows of five. Grades below five are not on the
+ * scale, so those cans stay dimmed and inert. Tapping the current grade
+ * clears it, matching the previous picker behaviour.
+ */
+@Composable
+private fun GradeCanPicker(
+    grade: Int?,
+    enabled: Boolean,
+    onSetGrade: (Int?) -> Unit,
+) {
+    val gradeRange = 5..10
+    Column(verticalArrangement = Arrangement.spacedBy(BeerTrackerSpacing.xSmall)) {
+        listOf(1..5, 6..10).forEach { slots ->
+            Row(horizontalArrangement = Arrangement.spacedBy(BeerTrackerSpacing.xSmall)) {
+                slots.forEach { slot ->
+                    val filled = grade != null && slot <= grade
+                    if (slot in gradeRange) {
+                        val selected = grade == slot
+                        val description = stringResource(R.string.grade_value, slot)
+                        Box(
+                            modifier = Modifier
+                                .size(width = 40.dp, height = 52.dp)
+                                .clip(MaterialTheme.shapes.extraSmall)
+                                .selectable(
+                                    selected = selected,
+                                    enabled = enabled,
+                                    role = Role.RadioButton,
+                                    onClick = { onSetGrade(if (selected) null else slot) },
+                                )
+                                .semantics { contentDescription = description },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            BeerCan(filled = filled, height = 34.dp)
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier.size(width = 40.dp, height = 52.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            BeerCan(filled = false, height = 34.dp, alpha = 0.4f)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

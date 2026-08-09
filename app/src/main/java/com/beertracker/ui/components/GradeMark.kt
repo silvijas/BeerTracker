@@ -1,28 +1,28 @@
 package com.beertracker.ui.components
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.tooling.preview.Preview
 import com.beertracker.R
 import com.beertracker.ui.theme.BeerTrackerTheme
 
+/**
+ * Shows a grade as filled beer cans out of ten, in two rows of five.
+ * [size] is the total height of the can grid.
+ */
 @Composable
 fun GradeMark(
     grade: Int?,
@@ -32,22 +32,18 @@ fun GradeMark(
 ) {
     if (grade != null) {
         val description = stringResource(R.string.grade_value, grade)
-        Surface(
-            modifier = modifier
-                .defaultMinSize(minWidth = size, minHeight = size)
-                .clip(CircleShape)
-                .semantics { contentDescription = description },
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.tertiaryContainer,
-            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary),
+        val gap = 3.dp
+        val canHeight = (size - gap) / 2
+        Column(
+            modifier = modifier.semantics { contentDescription = description },
+            verticalArrangement = Arrangement.spacedBy(gap),
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    text = grade.toString(),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                )
+            listOf(1..5, 6..10).forEach { slots ->
+                Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                    slots.forEach { slot ->
+                        BeerCan(filled = slot <= grade, height = canHeight)
+                    }
+                }
             }
         }
     } else {
