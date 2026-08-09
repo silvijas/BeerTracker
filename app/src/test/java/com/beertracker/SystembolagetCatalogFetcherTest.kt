@@ -109,18 +109,21 @@ class SystembolagetCatalogFetcherTest {
         assertEquals(330, mapProduct(json).volumeMl)
     }
 
+    private fun page(products: String, nextPage: Int) =
+        """{"products": [$products], "metadata": {"nextPage": $nextPage}}"""
+
     @Test
-    fun `walks pages until the first empty page and keeps only beer`() = runTest {
+    fun `runs one full sweep per sort key, following nextPage until -1`() = runTest {
         val requested = mutableListOf<String>()
-        val pages = listOf(
-            """{"products": [$sampleBeer, $sampleWine]}""",
-            """{"products": [$secondBeer]}""",
-            """{"products": []}""",
-        )
         val fetcher = SystembolagetCatalogFetcher(
             httpGet = { url ->
                 requested.add(url)
-                pages[requested.size - 1]
+                when {
+                    url.contains("sortBy=Name") && url.contains("page=1") -> page(sampleBeer, nextPage = 2)
+                    url.contains("sortBy=Name") && url.contains("page=2") -> page(secondBeer, nextPage = -1)
+                    url.contains("sortBy=Price") && url.contains("page=1") -> page("", nextPage = -1)
+                    else -> throw AssertionError("unexpected url $url")
+                }
             },
             ioDispatcher = UnconfinedTestDispatcher(testScheduler),
         )
@@ -128,53 +131,49 @@ class SystembolagetCatalogFetcherTest {
         val beers = fetcher.fetchAllBeers()
 
         assertEquals(3, requested.size)
-        assertTrue(requested[0].endsWith("size=30&page=1&categoryLevel1=%C3%96l"))
-        assertTrue(requested[2].endsWith("page=3&categoryLevel1=%C3%96l"))
+        assertTrue(requested[0].contains("page=1") && requested[0].contains("sortBy=Name") && requested[0].contains("sortDirection=Ascending"))
+        assertTrue(requested[1].contains("page=2") && requested[1].contains("sortBy=Name"))
+        assertTrue(requested[2].contains("page=1") && requested[2].contains("sortBy=Price") && requested[2].contains("sortDirection=Ascending"))
         assertEquals(listOf("1000501", "1324515"), beers.map { it.articleNumber })
     }
 
     @Test
-    fun `deduplicates by article number and sorts for stable results`() = runTest {
-        val pages = listOf(
-            """{"products": [$sampleBeer, $secondBeer]}""",
-            """{"products": [$sampleBeer]}""",
-            """{"products": []}""",
-        )
-        var call = 0
+    fun `deduplicates products seen in more than one sweep and filters non-beer`() = runTest {
         val fetcher = SystembolagetCatalogFetcher(
-            httpGet = { pages[call++] },
-            ioDispatcher = UnconfinedTestDispatcher(testScheduler),
-        )
-        assertEquals(listOf("1000501", "1324515"), fetcher.fetchAllBeers().map { it.articleNumber })
-    }
-
-    @Test
-    fun `http failures propagate to the caller`() = runTest {
-        val fetcher = SystembolagetCatalogFetcher(
-            httpGet = { throw IOException("HTTP 503") },
-            ioDispatcher = UnconfinedTestDispatcher(testScheduler),
-        )
-        var thrown: IOException? = null
-        try {
-            fetcher.fetchAllBeers()
-        } catch (error: IOException) {
-            thrown = error
-        }
-        assertNotNull(thrown)
-    }
-
-    @Test
-    fun `a failure on a later page fails the whole fetch instead of returning a partial result`() = runTest {
-        var call = 0
-        val fetcher = SystembolagetCatalogFetcher(
-            httpGet = {
-                call++
-                if (call == 1) {
-                    """{"products": [$sampleBeer]}"""
-                } else {
-                    throw IOException("HTTP 503")
+            httpGet = { url ->
+                when {
+                    url.contains("sortBy=Name") -> page("$sampleBeer, $sampleWine", nextPage = -1)
+                    url.contains("sortBy=Price") -> page(sampleBeer, nextPage = -1)
+                    else -> throw AssertionError("unexpected url $url")
                 }
             },
+            ioDispatcher = UnconfinedTestDispatcher(testScheduler),
+        )
+        assertEquals(listOf("1324515"), fetcher.fetchAllBeers().map { it.articleNumber })
+    }
+
+    @Test
+    fun `retries a transient http failure and succeeds`() = runTest {
+        var nameAttempts = 0
+        val fetcher = SystembolagetCatalogFetcher(
+            httpGet = { url ->
+                if (url.contains("sortBy=Name")) {
+                    nameAttempts++
+                    if (nameAttempts < 3) throw IOException("HTTP 503") else page(sampleBeer, nextPage = -1)
+                } else {
+                    page("", nextPage = -1)
+                }
+            },
+            ioDispatcher = UnconfinedTestDispatcher(testScheduler),
+        )
+        assertEquals(listOf("1324515"), fetcher.fetchAllBeers().map { it.articleNumber })
+        assertEquals(3, nameAttempts)
+    }
+
+    @Test
+    fun `gives up and propagates the failure once retries are exhausted`() = runTest {
+        val fetcher = SystembolagetCatalogFetcher(
+            httpGet = { throw IOException("HTTP 503") },
             ioDispatcher = UnconfinedTestDispatcher(testScheduler),
         )
         var thrown: IOException? = null

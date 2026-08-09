@@ -87,6 +87,86 @@ class MapProductTest(unittest.TestCase):
         self.assertIsNone(fetch_catalog.map_product(product)["imageUrl"])
 
 
+class PageUrlTest(unittest.TestCase):
+    def test_includes_sort_params_and_percent_encoded_category(self):
+        url = fetch_catalog.page_url(3, "Name", "Ascending")
+        self.assertIn("page=3", url)
+        self.assertIn("sortBy=Name", url)
+        self.assertIn("sortDirection=Ascending", url)
+        self.assertIn("categoryLevel1=%C3%96l", url)
+
+
+class FetchPageWithRetryTest(unittest.TestCase):
+    def test_returns_parsed_json_on_first_success(self):
+        sleeps = []
+        result = fetch_catalog.fetch_page_with_retry(
+            "http://x", lambda url: '{"products": []}', sleeps.append
+        )
+        self.assertEqual(result, {"products": []})
+        self.assertEqual(sleeps, [])
+
+    def test_retries_transient_failures_then_succeeds(self):
+        attempts = {"n": 0}
+
+        def flaky_get(url):
+            attempts["n"] += 1
+            if attempts["n"] < 3:
+                raise OSError("connection reset")
+            return '{"products": []}'
+
+        sleeps = []
+        result = fetch_catalog.fetch_page_with_retry("http://x", flaky_get, sleeps.append)
+        self.assertEqual(attempts["n"], 3)
+        self.assertEqual(result, {"products": []})
+        self.assertEqual(len(sleeps), 2)
+
+    def test_raises_the_last_error_after_exhausting_retries(self):
+        def always_fails(url):
+            raise OSError("still failing")
+
+        with self.assertRaises(OSError):
+            fetch_catalog.fetch_page_with_retry("http://x", always_fails, lambda seconds: None)
+
+
+class FetchSweepTest(unittest.TestCase):
+    def test_follows_next_page_until_minus_one(self):
+        pages = {
+            1: '{"products": [{"productNumber": "a"}], "metadata": {"nextPage": 2}}',
+            2: '{"products": [{"productNumber": "b"}], "metadata": {"nextPage": -1}}',
+        }
+
+        def http_get(url):
+            for page_num, body in pages.items():
+                if "page=%d" % page_num in url:
+                    return body
+            raise AssertionError("unexpected url " + url)
+
+        products = fetch_catalog.fetch_sweep("Name", "Ascending", http_get, lambda seconds: None)
+        self.assertEqual([p["productNumber"] for p in products], ["a", "b"])
+
+    def test_stops_when_next_page_is_absent(self):
+        def http_get(url):
+            return '{"products": [{"productNumber": "a"}], "metadata": {}}'
+
+        products = fetch_catalog.fetch_sweep("Name", "Ascending", http_get, lambda seconds: None)
+        self.assertEqual(len(products), 1)
+
+
+class FetchAllProductsTest(unittest.TestCase):
+    def test_concatenates_every_configured_sweep(self):
+        def http_get(url):
+            if "sortBy=Name" in url:
+                return '{"products": [{"productNumber": "a"}], "metadata": {"nextPage": -1}}'
+            if "sortBy=Price" in url:
+                return '{"products": [{"productNumber": "b"}], "metadata": {"nextPage": -1}}'
+            raise AssertionError("unexpected url " + url)
+
+        products = fetch_catalog.fetch_all_products(
+            "fake-key", http_get=http_get, sleep=lambda seconds: None
+        )
+        self.assertEqual([p["productNumber"] for p in products], ["a", "b"])
+
+
 class ToSnapshotTest(unittest.TestCase):
     def test_filters_to_beer_only(self):
         snapshot = fetch_catalog.to_snapshot([SAMPLE_BEER, SAMPLE_WINE], "2026-08-08")

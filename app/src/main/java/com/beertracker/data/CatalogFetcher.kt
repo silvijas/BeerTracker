@@ -25,12 +25,22 @@ private const val PAGE_SIZE = 30
 // categoryLevel1=Öl with the Ö percent-encoded, matching scripts/fetch_catalog.py.
 private const val CATEGORY_FILTER = "categoryLevel1=%C3%96l"
 private const val MAX_PAGES = 500
+private const val MAX_RETRIES = 5
+
+// Two full sweeps with different deterministic sort keys, unioned by
+// articleNumber. Necessary because the live search API has no stable sort
+// for items that tie on the sort field: their relative order can still
+// drift between page requests, so a single sweep silently drops a
+// meaningful slice of a category this large (measured 2026-08-09: a lone
+// Name-sorted sweep recovered only 4826 of 4984 Öl products). A second
+// sweep on an unrelated field ties differently and recovers nearly all the
+// rest (4966 of 4984 unioned). Matches scripts/fetch_catalog.py.
+private val SORT_SWEEPS = listOf("Name" to "Ascending", "Price" to "Ascending")
 
 interface CatalogFetcher {
     /**
-     * Fetches every beer in the live assortment, or throws. Politeness rules
-     * match the seed script: sequential pages of 30 with a small delay, stop
-     * at the first empty page.
+     * Fetches every beer in the live assortment, or throws. Runs one full
+     * sweep per entry in SORT_SWEEPS, unioning by article number.
      */
     suspend fun fetchAllBeers(): List<CatalogProduct>
 }
@@ -39,29 +49,65 @@ class SystembolagetCatalogFetcher(
     private val httpGet: (String) -> String = ::defaultHttpGet,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val pageDelayMillis: Long = 300L,
+    private val retryDelayMillis: Long = 1_000L,
 ) : CatalogFetcher {
 
     override suspend fun fetchAllBeers(): List<CatalogProduct> = withContext(ioDispatcher) {
         val beers = mutableListOf<CatalogProduct>()
-        for (page in 1..MAX_PAGES) {
-            val products = parseProductsPage(httpGet(pageUrl(page)))
-            if (products.isEmpty()) break
-            products.filter(::isBeer).mapTo(beers, ::mapProduct)
-            delay(pageDelayMillis)
+        for ((sortBy, sortDirection) in SORT_SWEEPS) {
+            fetchSweep(sortBy, sortDirection).filter(::isBeer).mapTo(beers, ::mapProduct)
         }
         beers
             .filter { it.articleNumber.isNotEmpty() }
             .distinctBy { it.articleNumber }
             .sortedBy { it.articleNumber }
     }
+
+    private suspend fun fetchSweep(sortBy: String, sortDirection: String): List<JSONObject> {
+        val products = mutableListOf<JSONObject>()
+        var page = 1
+        repeat(MAX_PAGES) {
+            val pageJson = fetchPageWithRetry(pageUrl(page, sortBy, sortDirection))
+            products.addAll(parseProductsPage(pageJson))
+            val nextPage = parseNextPage(pageJson)
+            if (nextPage == null || nextPage <= 0) return products
+            page = nextPage
+            delay(pageDelayMillis)
+        }
+        return products
+    }
+
+    // A handful of the ~170 sequential requests in a full sweep hit
+    // transient network errors in practice; retry with backoff instead of
+    // aborting the whole sweep.
+    private suspend fun fetchPageWithRetry(url: String): String {
+        var lastError: IOException? = null
+        repeat(MAX_RETRIES) { attempt ->
+            try {
+                return httpGet(url)
+            } catch (error: IOException) {
+                lastError = error
+                delay(retryDelayMillis * (attempt + 1))
+            }
+        }
+        throw lastError!!
+    }
 }
 
-internal fun pageUrl(page: Int): String =
-    "$SEARCH_URL?size=$PAGE_SIZE&page=$page&$CATEGORY_FILTER"
+internal fun pageUrl(page: Int, sortBy: String, sortDirection: String): String =
+    "$SEARCH_URL?size=$PAGE_SIZE&page=$page&$CATEGORY_FILTER&sortBy=$sortBy&sortDirection=$sortDirection"
 
 internal fun parseProductsPage(pageJson: String): List<JSONObject> {
     val products = JSONObject(pageJson).optJSONArray("products") ?: return emptyList()
     return (0 until products.length()).mapNotNull { products.optJSONObject(it) }
+}
+
+// NOTE: the API signals the end of results via metadata.nextPage == -1, not
+// an empty products array -- an out-of-range page 404s instead of
+// returning {"products": []}.
+internal fun parseNextPage(pageJson: String): Int? {
+    val metadata = JSONObject(pageJson).optJSONObject("metadata") ?: return null
+    return if (metadata.has("nextPage")) metadata.optInt("nextPage") else null
 }
 
 internal fun isBeer(product: JSONObject): Boolean =

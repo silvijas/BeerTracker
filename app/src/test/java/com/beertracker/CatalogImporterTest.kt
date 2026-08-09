@@ -93,11 +93,11 @@ class CatalogImporterTest {
         val assetText = context.assets.open("catalog/beers.json").bufferedReader().use { it.readText() }
 
         val seed = parseCatalogAsset(assetText)
-        assertEquals(1530, seed.beers.size)
+        assertEquals(4970, seed.beers.size)
         assertTrue(seed.snapshotVersion.isNotBlank())
 
         CatalogImporter({ assetText }, db).importIfNeeded()
-        assertEquals(1530, db.catalogDao().count())
+        assertEquals(4970, db.catalogDao().count())
         assertEquals("1462", db.catalogDao().findByNumber("146212")?.articleNumberShort)
     }
 }

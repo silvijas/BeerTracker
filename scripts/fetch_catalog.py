@@ -39,9 +39,20 @@ REFERER = "https://www.systembolaget.se/"
 PAGE_SIZE = 30
 PAGE_DELAY_SECONDS = 0.3
 MAX_PAGES = 500
+MAX_RETRIES = 5
+RETRY_DELAY_SECONDS = 1.0
+# Two full sweeps with different deterministic sort keys, unioned by
+# articleNumber in to_snapshot. Necessary because the live search API has no
+# stable sort for items that tie on the sort field: their relative order can
+# still drift between page requests, so a single sweep silently drops a
+# meaningful slice of a category this large (measured 2026-08-09: a lone
+# Name-sorted sweep recovered only 4826 of 4984 Öl products). A second sweep
+# on an unrelated field ties differently and recovers nearly all the rest
+# (4966 of 4984 unioned).
+SORT_SWEEPS = [("Name", "Ascending"), ("Price", "Ascending")]
 OUTPUT_PATH = os.path.join("app", "src", "main", "assets", "catalog", "beers.json")
-MIN_EXPECTED_BEERS = 1000
-MAX_EXPECTED_BEERS = 3000
+MIN_EXPECTED_BEERS = 4000
+MAX_EXPECTED_BEERS = 6000
 
 
 def is_beer(product):
@@ -98,31 +109,76 @@ def to_snapshot(raw_products, today_utc, previous_snapshot=None):
     return {"snapshotVersion": version, "beers": ordered}
 
 
-def fetch_all_products(api_key):
-    """Polite sequential pagination: size 30, a small delay between requests,
-    stop at the first empty page."""
+def page_url(page, sort_by, sort_direction):
+    params = urlencode(
+        {
+            "size": PAGE_SIZE,
+            "page": page,
+            "categoryLevel1": "Öl",
+            "sortBy": sort_by,
+            "sortDirection": sort_direction,
+        }
+    )
+    return BASE_URL + "?" + params
+
+
+def default_http_get(url, api_key):
+    request = urllib.request.Request(
+        url,
+        headers={
+            "ocp-apim-subscription-key": api_key,
+            "Referer": REFERER,
+            "Accept": "application/json",
+            "User-Agent": "BeerTracker seed generator (personal project)",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return response.read().decode("utf-8")
+
+
+def fetch_page_with_retry(url, http_get, sleep):
+    """A handful of the ~170 sequential requests in a full sweep hit
+    transient network errors in practice; retry with backoff instead of
+    aborting the whole sweep."""
+    last_error = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            return json.loads(http_get(url))
+        except Exception as error:
+            last_error = error
+            sys.stderr.write("  %s (attempt %d/%d)\n" % (error, attempt, MAX_RETRIES))
+            sleep(RETRY_DELAY_SECONDS * attempt)
+    raise last_error
+
+
+def fetch_sweep(sort_by, sort_direction, http_get, sleep):
+    """Pages through one full sweep, following metadata.nextPage until it
+    reports -1 (or is absent). NOTE: the API signals the end of results via
+    nextPage, not an empty products array -- an out-of-range page 404s
+    instead of returning {"products": []}."""
     products = []
-    for page in range(1, MAX_PAGES + 1):
-        params = urlencode({"size": PAGE_SIZE, "page": page, "categoryLevel1": "Öl"})
-        request = urllib.request.Request(
-            BASE_URL + "?" + params,
-            headers={
-                "ocp-apim-subscription-key": api_key,
-                "Referer": REFERER,
-                "Accept": "application/json",
-                "User-Agent": "BeerTracker seed generator (personal project)",
-            },
-        )
-        with urllib.request.urlopen(request, timeout=30) as response:
-            payload = json.load(response)
+    page = 1
+    for _ in range(MAX_PAGES):
+        payload = fetch_page_with_retry(page_url(page, sort_by, sort_direction), http_get, sleep)
         page_products = payload.get("products") or []
-        if not page_products:
-            break
         products.extend(page_products)
         sys.stderr.write(
-            "page %d: %d products, %d total\n" % (page, len(page_products), len(products))
+            "%s %s page %d: %d products, %d total\n"
+            % (sort_by, sort_direction, page, len(page_products), len(products))
         )
-        time.sleep(PAGE_DELAY_SECONDS)
+        next_page = payload.get("metadata", {}).get("nextPage")
+        if not next_page or next_page <= 0:
+            break
+        page = next_page
+        sleep(PAGE_DELAY_SECONDS)
+    return products
+
+
+def fetch_all_products(api_key, http_get=None, sleep=time.sleep):
+    getter = http_get or (lambda url: default_http_get(url, api_key))
+    products = []
+    for sort_by, sort_direction in SORT_SWEEPS:
+        products.extend(fetch_sweep(sort_by, sort_direction, getter, sleep))
     return products
 
 
