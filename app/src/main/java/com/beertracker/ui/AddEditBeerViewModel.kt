@@ -7,6 +7,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.beertracker.BeerApp
 import com.beertracker.domain.BeerRepository
+import com.beertracker.domain.CatalogBrowseLogic
+import com.beertracker.domain.CatalogProduct
 import com.beertracker.domain.CatalogRepository
 import com.beertracker.domain.Presets
 import com.beertracker.domain.TriedBeer
@@ -16,6 +18,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -87,6 +91,28 @@ class AddEditBeerViewModel(
     private var loadedBeerId: String? = null
     private var prefilledArticle: String? = null
     private var baseline = BeerFormState()
+
+    /**
+     * The name of the last catalog product put into the form, from a picked
+     * suggestion or a scan prefill. While the name field still holds exactly
+     * this text the suggestion list stays hidden, so a just-filled form does
+     * not immediately suggest the same beer back.
+     */
+    private val appliedCatalogName = MutableStateFlow<String?>(null)
+
+    val catalogSuggestions: StateFlow<List<CatalogProduct>> = combine(
+        _form,
+        catalogRepository?.observeProducts() ?: flowOf(emptyList()),
+        appliedCatalogName,
+    ) { form, products, appliedName ->
+        val query = form.name.trim()
+        when {
+            form.id != null || loadedBeerId != null -> emptyList()
+            query.length < 2 -> emptyList()
+            query == appliedName -> emptyList()
+            else -> CatalogBrowseLogic.filterAndSort(products, query).take(8)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun load(beerId: String) {
         if (loadedBeerId == beerId) return
@@ -160,16 +186,8 @@ class AddEditBeerViewModel(
             try {
                 val product = catalog.findByArticleNumber(articleNumber) ?: return@launch
                 if (loadedBeerId != null) return@launch
-                val prefilled = BeerFormState(
-                    name = product.name,
-                    brewery = product.brewery,
-                    type = product.type,
-                    alcoholPercent = product.alcoholPercent?.toString() ?: "",
-                    volumeMl = product.volumeMl?.toString() ?: "",
-                    price = product.price?.toString() ?: "",
-                    catalogArticleNumber = product.articleNumber,
-                    imageUrl = product.displayImageUrl,
-                )
+                appliedCatalogName.value = product.name
+                val prefilled = formFilledFrom(product)
                 _form.value = prefilled.copy(
                     hasUnsavedChanges = prefilled.formContent() != baseline.formContent(),
                 )
@@ -178,6 +196,32 @@ class AddEditBeerViewModel(
                 // A failed lookup leaves the empty manual form usable.
             }
         }
+    }
+
+    private fun formFilledFrom(product: CatalogProduct) = BeerFormState(
+        name = product.name,
+        brewery = product.brewery,
+        type = product.type,
+        alcoholPercent = product.alcoholPercent?.toString() ?: "",
+        volumeMl = product.volumeMl?.toString() ?: "",
+        price = product.price?.toString() ?: "",
+        catalogArticleNumber = product.articleNumber,
+        imageUrl = product.displayImageUrl,
+    )
+
+    /**
+     * Fills the add form from a catalog product picked in the suggestion
+     * list. Same copy semantics as [prefillFromCatalog]: the form gets its
+     * own copies of every field, so catalog refreshes never touch the
+     * saved beer. Ignored while editing an existing beer.
+     */
+    fun applyCatalogProduct(product: CatalogProduct) {
+        if (loadedBeerId != null) return
+        appliedCatalogName.value = product.name
+        val filled = formFilledFrom(product)
+        _form.value = filled.copy(
+            hasUnsavedChanges = filled.formContent() != baseline.formContent(),
+        )
     }
 
     fun update(transform: (BeerFormState) -> BeerFormState) = _form.update { current ->

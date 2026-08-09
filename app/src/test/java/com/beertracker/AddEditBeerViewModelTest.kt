@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -532,6 +534,106 @@ class AddEditBeerViewModelTest {
 
         assertEquals("a", vm.form.value.id)
         assertEquals("Loaded Beer", vm.form.value.name)
+    }
+
+    @Test
+    fun `typing two characters surfaces catalog suggestions in add mode`() = runTest {
+        val catalog = FakeCatalogRepository().apply { add(catalogProduct()) }
+        val vm = AddEditBeerViewModel(FakeBeerRepository(), catalog)
+        backgroundScope.launch { vm.catalogSuggestions.collect { } }
+        advanceUntilIdle()
+
+        vm.update { it.copy(name = "o") }
+        advanceUntilIdle()
+        assertEquals(0, vm.catalogSuggestions.value.size)
+
+        vm.update { it.copy(name = "om") }
+        advanceUntilIdle()
+        assertEquals(
+            listOf("Omnipollo Prodigal Pale Ale"),
+            vm.catalogSuggestions.value.map { it.name },
+        )
+    }
+
+    @Test
+    fun `suggestions are capped at eight`() = runTest {
+        val catalog = FakeCatalogRepository()
+        (1..10).forEach { index ->
+            catalog.add(
+                catalogProduct(
+                    articleNumber = "100$index",
+                    articleNumberShort = null,
+                    name = "Lager number $index",
+                ),
+            )
+        }
+        val vm = AddEditBeerViewModel(FakeBeerRepository(), catalog)
+        backgroundScope.launch { vm.catalogSuggestions.collect { } }
+
+        vm.update { it.copy(name = "lager") }
+        advanceUntilIdle()
+
+        assertEquals(8, vm.catalogSuggestions.value.size)
+    }
+
+    @Test
+    fun `editing an existing beer never shows suggestions`() = runTest {
+        val repo = FakeBeerRepository()
+        repo.addBeer(beer(id = "b1", name = "Omnipollo Something"))
+        val catalog = FakeCatalogRepository().apply { add(catalogProduct()) }
+        val vm = AddEditBeerViewModel(repo, catalog)
+        vm.load("b1")
+        backgroundScope.launch { vm.catalogSuggestions.collect { } }
+
+        vm.update { it.copy(name = "Omnipollo") }
+        advanceUntilIdle()
+
+        assertEquals(0, vm.catalogSuggestions.value.size)
+    }
+
+    @Test
+    fun `applying a product fills the form and hides suggestions until the name changes`() = runTest {
+        val product = catalogProduct()
+        val catalog = FakeCatalogRepository().apply { add(product) }
+        val vm = AddEditBeerViewModel(FakeBeerRepository(), catalog)
+        backgroundScope.launch { vm.catalogSuggestions.collect { } }
+
+        vm.update { it.copy(name = "omni") }
+        advanceUntilIdle()
+        vm.applyCatalogProduct(product)
+        advanceUntilIdle()
+
+        val form = vm.form.value
+        assertEquals("Omnipollo Prodigal Pale Ale", form.name)
+        assertEquals("Omnipollo", form.brewery)
+        assertEquals("Ale", form.type)
+        assertEquals("5.2", form.alcoholPercent)
+        assertEquals("330", form.volumeMl)
+        assertEquals("25.9", form.price)
+        assertEquals("1324515", form.catalogArticleNumber)
+        assertEquals(
+            "https://product-cdn.systembolaget.se/productimages/50786609/50786609_400.jpg",
+            form.imageUrl,
+        )
+        assertTrue(form.hasUnsavedChanges)
+        assertEquals(0, vm.catalogSuggestions.value.size)
+
+        vm.update { it.copy(name = "Omnipollo Prodigal") }
+        advanceUntilIdle()
+        assertEquals(1, vm.catalogSuggestions.value.size)
+    }
+
+    @Test
+    fun `a scan prefill also keeps suggestions hidden for the prefilled name`() = runTest {
+        val catalog = FakeCatalogRepository().apply { add(catalogProduct()) }
+        val vm = AddEditBeerViewModel(FakeBeerRepository(), catalog)
+        backgroundScope.launch { vm.catalogSuggestions.collect { } }
+
+        vm.prefillFromCatalog("1324515")
+        advanceUntilIdle()
+
+        assertEquals("Omnipollo Prodigal Pale Ale", vm.form.value.name)
+        assertEquals(0, vm.catalogSuggestions.value.size)
     }
 }
 
