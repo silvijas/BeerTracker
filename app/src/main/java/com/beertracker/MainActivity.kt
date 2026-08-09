@@ -21,6 +21,8 @@ import com.beertracker.ui.DetailScreen
 import com.beertracker.ui.DetailViewModel
 import com.beertracker.ui.OverviewScreen
 import com.beertracker.ui.OverviewViewModel
+import com.beertracker.ui.catalog.CatalogBrowserScreen
+import com.beertracker.ui.catalog.CatalogBrowserViewModel
 import com.beertracker.ui.scan.ScanScreen
 import com.beertracker.ui.scan.ScanViewModel
 import com.beertracker.ui.theme.BeerTrackerTheme
@@ -59,6 +61,7 @@ fun BeerNavHost(
                 onAddClick = { navController.navigate("edit") },
                 onBeerClick = { id -> navController.navigate("detail/$id") },
                 onScanClick = { navController.navigate("scan") },
+                onCatalogClick = { navController.navigate("catalog") },
                 themeMode = themeMode,
                 onSetThemeMode = onSetThemeMode,
             )
@@ -93,6 +96,16 @@ fun BeerNavHost(
                         popUpTo("scan") { inclusive = true }
                     }
                 },
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable("catalog") {
+            CatalogBrowserScreen(
+                viewModel = viewModel(factory = CatalogBrowserViewModel.Factory),
+                onAddProduct = { articleNumber ->
+                    navController.navigate("edit?prefillArticle=$articleNumber")
+                },
+                onOpenBeer = { id -> navController.navigate("detail/$id") },
                 onBack = { navController.popBackStack() },
             )
         }

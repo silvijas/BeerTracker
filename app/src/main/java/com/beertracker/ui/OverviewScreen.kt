@@ -77,6 +77,7 @@ fun OverviewScreen(
     onAddClick: () -> Unit,
     onBeerClick: (String) -> Unit,
     onScanClick: () -> Unit = {},
+    onCatalogClick: () -> Unit = {},
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     onSetThemeMode: (ThemeMode) -> Unit = {},
 ) {
@@ -109,6 +110,9 @@ fun OverviewScreen(
                 actions = {
                     TextButton(onClick = onScanClick) {
                         Text(stringResource(R.string.scan_action))
+                    }
+                    TextButton(onClick = onCatalogClick) {
+                        Text(stringResource(R.string.catalog_action))
                     }
                     if (refreshState == CatalogRefreshUiState.Refreshing) {
                         CircularProgressIndicator(

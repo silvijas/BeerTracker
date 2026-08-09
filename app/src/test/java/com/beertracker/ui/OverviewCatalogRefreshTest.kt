@@ -22,6 +22,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import kotlinx.coroutines.CompletableDeferred
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -117,6 +118,27 @@ class OverviewCatalogRefreshTest {
         composeRule.onNodeWithText("Update now").performClick()
 
         composeRule.onNodeWithText("Could not reach the Systembolaget catalog").assertIsDisplayed()
+    }
+
+    @Test
+    fun `the catalog button invokes the catalog navigation callback`() {
+        var opened = false
+        val catalogViewModel = CatalogRefreshViewModel(FakeCatalogRepository(), FakeCatalogRefresher())
+        composeRule.setContent {
+            BeerTrackerTheme {
+                OverviewScreen(
+                    viewModel = OverviewViewModel(FakeBeerRepository()),
+                    catalogViewModel = catalogViewModel,
+                    onAddClick = {},
+                    onBeerClick = {},
+                    onCatalogClick = { opened = true },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Catalog").performClick()
+
+        assertTrue(opened)
     }
 
     @Test
