@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -57,6 +58,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.beertracker.R
 import com.beertracker.domain.BeerSort
 import com.beertracker.domain.RefreshResult
+import com.beertracker.domain.ThemeMode
 import com.beertracker.ui.components.BeerListItem
 import com.beertracker.ui.components.EmptyState
 import com.beertracker.ui.components.ErrorState
@@ -75,6 +77,8 @@ fun OverviewScreen(
     onAddClick: () -> Unit,
     onBeerClick: (String) -> Unit,
     onScanClick: () -> Unit = {},
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
+    onSetThemeMode: (ThemeMode) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val refreshState by catalogViewModel.refreshState.collectAsStateWithLifecycle()
@@ -121,6 +125,10 @@ fun OverviewScreen(
                             )
                         }
                     }
+                    ThemeMenuAction(
+                        themeMode = themeMode,
+                        onSetThemeMode = onSetThemeMode,
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
@@ -395,6 +403,51 @@ private fun FilterRow(
         }
     }
 }
+
+@Composable
+private fun ThemeMenuAction(
+    themeMode: ThemeMode,
+    onSetThemeMode: (ThemeMode) -> Unit,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { menuOpen = true }) {
+            Icon(
+                Icons.Filled.Settings,
+                contentDescription = stringResource(R.string.theme_menu),
+            )
+        }
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            ThemeMode.entries.forEach { mode ->
+                val isSelected = mode == themeMode
+                DropdownMenuItem(
+                    modifier = Modifier.semantics { selected = isSelected },
+                    text = { Text(themeModeLabel(mode)) },
+                    trailingIcon = if (isSelected) {
+                        {
+                            Icon(Icons.Filled.Check, contentDescription = null)
+                        }
+                    } else {
+                        null
+                    },
+                    onClick = {
+                        onSetThemeMode(mode)
+                        menuOpen = false
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun themeModeLabel(mode: ThemeMode): String = stringResource(
+    when (mode) {
+        ThemeMode.SYSTEM -> R.string.theme_system
+        ThemeMode.LIGHT -> R.string.theme_light
+        ThemeMode.DARK -> R.string.theme_dark
+    },
+)
 
 @Composable
 private fun selectedIcon(selected: Boolean): (@Composable () -> Unit)? =

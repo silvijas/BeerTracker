@@ -13,6 +13,10 @@
     <string name="search_label">Search your cellar</string>
     <string name="search_placeholder">Name, brewery, or type</string>
     <string name="clear_search">Clear search</string>
+    <string name="theme_menu">Theme</string>
+    <string name="theme_system">System default</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
     <string name="filters">Filters</string>
     <string name="buy_again">Buy again</string>
     <string name="favourites">Favourites</string>

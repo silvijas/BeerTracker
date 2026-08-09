@@ -4,7 +4,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -21,21 +24,32 @@ import com.beertracker.ui.OverviewViewModel
 import com.beertracker.ui.scan.ScanScreen
 import com.beertracker.ui.scan.ScanViewModel
 import com.beertracker.ui.theme.BeerTrackerTheme
+import com.beertracker.ui.ThemeViewModel
+import com.beertracker.domain.ThemeMode
+import com.beertracker.domain.isDarkTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            BeerTrackerTheme {
-                BeerNavHost()
+            val themeViewModel: ThemeViewModel = viewModel(factory = ThemeViewModel.Factory)
+            val themeMode by themeViewModel.themeMode.collectAsStateWithLifecycle()
+            BeerTrackerTheme(darkTheme = themeMode.isDarkTheme(isSystemInDarkTheme())) {
+                BeerNavHost(
+                    themeMode = themeMode,
+                    onSetThemeMode = themeViewModel::setThemeMode,
+                )
             }
         }
     }
 }
 
 @Composable
-fun BeerNavHost() {
+fun BeerNavHost(
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
+    onSetThemeMode: (ThemeMode) -> Unit = {},
+) {
     val navController = rememberNavController()
     NavHost(navController, startDestination = "overview") {
         composable("overview") {
@@ -45,6 +59,8 @@ fun BeerNavHost() {
                 onAddClick = { navController.navigate("edit") },
                 onBeerClick = { id -> navController.navigate("detail/$id") },
                 onScanClick = { navController.navigate("scan") },
+                themeMode = themeMode,
+                onSetThemeMode = onSetThemeMode,
             )
         }
         composable(

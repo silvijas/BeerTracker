@@ -7,6 +7,7 @@ import com.beertracker.data.BeerDatabase
 import com.beertracker.data.CatalogDatabase
 import com.beertracker.data.CatalogImporter
 import com.beertracker.data.DefaultCatalogRefresher
+import com.beertracker.data.PrefsSettingsRepository
 import com.beertracker.data.RoomBeerRepository
 import com.beertracker.data.RoomCatalogRepository
 import com.beertracker.data.SystembolagetCatalogFetcher
@@ -14,6 +15,7 @@ import com.beertracker.data.isNetworkAvailable
 import com.beertracker.domain.BeerRepository
 import com.beertracker.domain.CatalogRefresher
 import com.beertracker.domain.CatalogRepository
+import com.beertracker.domain.SettingsRepository
 import com.beertracker.domain.shouldAutoRefresh
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -30,6 +32,7 @@ class AppContainer(context: Context) {
     val catalogRepository: CatalogRepository = RoomCatalogRepository(catalogDb.catalogDao())
     val catalogRefresher: CatalogRefresher =
         DefaultCatalogRefresher(catalogDb, SystembolagetCatalogFetcher())
+    val settingsRepository: SettingsRepository = PrefsSettingsRepository(context)
     val catalogImporter = CatalogImporter(
         readAsset = {
             context.assets.open("catalog/beers.json").bufferedReader().use { it.readText() }
