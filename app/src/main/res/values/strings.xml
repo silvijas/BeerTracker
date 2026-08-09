@@ -121,4 +121,11 @@
     <string name="catalog_status_updated">Updated %1$s, %2$d beers.</string>
     <string name="catalog_updated_message">Catalog updated, %1$d beers</string>
     <string name="beer_image_description">Product image for %1$s</string>
+    <string name="catalog_action">Catalog</string>
+    <string name="catalog_title">Catalog</string>
+    <string name="catalog_loading">Loading the catalog</string>
+    <string name="catalog_search_label">Search the catalog</string>
+    <string name="catalog_empty_title">Catalog is empty</string>
+    <string name="catalog_empty_message">Use the update button on the overview to download the beer catalog.</string>
+    <string name="catalog_no_results_message">Try a different name, brewery, type, or article number.</string>
 </resources>
