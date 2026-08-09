@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.beertracker.ui.theme.EyebrowTextStyle
 
 @Composable
 fun SectionHeader(
@@ -18,8 +19,8 @@ fun SectionHeader(
 ) {
     Column(modifier.fillMaxWidth()) {
         Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge,
+            text = title.uppercase(),
+            style = EyebrowTextStyle,
             color = MaterialTheme.colorScheme.onSurface,
         )
         if (supportingText != null) {
@@ -31,8 +32,8 @@ fun SectionHeader(
             )
         }
         HorizontalDivider(
-            modifier = Modifier.padding(top = 10.dp),
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+            modifier = Modifier.padding(top = 8.dp),
+            color = MaterialTheme.colorScheme.outlineVariant,
         )
     }
 }

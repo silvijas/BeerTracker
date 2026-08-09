@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -132,6 +133,9 @@ fun OverviewScreen(
                     onClick = onAddClick,
                     icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                     text = { Text(stringResource(R.string.add_beer)) },
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary,
                 )
             }
         },
@@ -227,7 +231,7 @@ fun OverviewScreen(
                                         ),
                                     )
                                     HorizontalDivider(
-                                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.28f),
+                                        color = MaterialTheme.colorScheme.outlineVariant,
                                     )
                                 }
                             }
