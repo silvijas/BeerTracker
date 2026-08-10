@@ -75,6 +75,7 @@ fun BeerListItem(
         horizontalArrangement = Arrangement.spacedBy(BeerTrackerSpacing.medium),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        BeerThumbnail(model = beer.displayImageUrl)
         Column(Modifier.weight(1f)) {
             Text(
                 text = beer.name,
