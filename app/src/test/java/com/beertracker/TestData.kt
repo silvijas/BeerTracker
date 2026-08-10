@@ -11,7 +11,7 @@ fun beer(
     alcoholPercent: Double? = 5.0,
     volumeMl: Int? = 330,
     price: Double? = 25.0,
-    grade: Int? = 7,
+    grade: Int? = 4,
     tried: Boolean = true,
     note: String = "",
     aftertaste: String = "",

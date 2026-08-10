@@ -330,7 +330,7 @@ private fun DetailContentPreview() {
                 alcoholPercent = 5.8,
                 volumeMl = 330,
                 price = 29.9,
-                grade = 9,
+                grade = 4,
                 tried = true,
                 note = "Toasted malt, dried fruit, and a clean finish.",
                 aftertaste = "Long and gently bitter.",

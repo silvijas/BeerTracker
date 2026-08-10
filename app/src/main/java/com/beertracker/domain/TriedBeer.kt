@@ -21,7 +21,7 @@ data class TriedBeer(
     val imageUrl: String?,
 ) {
     init {
-        require(grade == null || grade in 5..10) { "Grade must be between 5 and 10, was $grade" }
+        require(grade == null || grade in 1..5) { "Grade must be between 1 and 5, was $grade" }
         require(grade == null || tried) { "A graded beer must be tried, grade was $grade" }
     }
 }

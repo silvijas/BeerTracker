@@ -47,9 +47,9 @@
     <string name="buy_again_selected">Buy again selected</string>
     <string name="switch_on">On</string>
     <string name="switch_off">Off</string>
-    <string name="grade_value">Grade %1$d out of 10</string>
+    <string name="grade_value">Grade %1$d out of 5</string>
     <string name="grade_scale_title">Grade</string>
-    <string name="grade_scale_help">Serbian school scale: 5 is a pass, 10 is exceptional. Tap the selected grade to clear it.</string>
+    <string name="grade_scale_help">1 to 5, 5 is the best. Tap the selected grade to clear it.</string>
     <string name="basics_section">Basics</string>
     <string name="tasting_section">Tasting</string>
     <string name="pairings_section">Pairings</string>
@@ -69,7 +69,7 @@
     <string name="price_error">Enter 0 or a positive amount</string>
     <string name="tried">Tried</string>
     <string name="tried_help">Turn this off to clear the grade.</string>
-    <string name="grade_error">Grade must be from 5 to 10, or left empty</string>
+    <string name="grade_error">Grade must be from 1 to 5, or left empty</string>
     <string name="note_label">Tasting note</string>
     <string name="aftertaste_label">Aftertaste</string>
     <string name="goes_well_with">Goes well with</string>

@@ -258,7 +258,7 @@ class AddEditBeerViewModel(
             _form.update { it.copy(nameError = true) }
             return
         }
-        if (f.grade != null && f.grade !in 5..10) {
+        if (f.grade != null && f.grade !in 1..5) {
             _form.update { it.copy(gradeError = true) }
             return
         }

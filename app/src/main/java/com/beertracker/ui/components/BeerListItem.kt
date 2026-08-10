@@ -138,7 +138,7 @@ private fun BeerListItemPreview() {
                 alcoholPercent = 5.2,
                 volumeMl = 330,
                 price = 24.9,
-                grade = 9,
+                grade = 4,
                 tried = true,
                 note = "",
                 aftertaste = "",
