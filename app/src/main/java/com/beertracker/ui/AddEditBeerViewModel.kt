@@ -222,6 +222,7 @@ class AddEditBeerViewModel(
         price = product.price?.toString() ?: "",
         catalogArticleNumber = product.articleNumber,
         imageUrl = product.displayImageUrl,
+        pairings = product.pairings.toSet(),
     )
 
     /**

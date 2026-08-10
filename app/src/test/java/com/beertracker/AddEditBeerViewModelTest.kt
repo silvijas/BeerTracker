@@ -656,6 +656,36 @@ class AddEditBeerViewModelTest {
 
         assertEquals(Pairing.entries.map { it.label } + "Tacos", vm.pairingOptions.value)
     }
+
+    @Test
+    fun `prefill from the catalog ticks the product's pairings`() = runTest {
+        val catalog = FakeCatalogRepository().apply {
+            add(catalogProduct(pairings = listOf("Pork", "Social drink")))
+        }
+        val vm = AddEditBeerViewModel(FakeBeerRepository(), catalog)
+
+        vm.prefillFromCatalog("1324515")
+        advanceUntilIdle()
+
+        assertEquals(setOf("Pork", "Social drink"), vm.form.value.pairings)
+    }
+
+    @Test
+    fun `a catalog filled pairing can be unticked and the change survives save`() = runTest {
+        val catalog = FakeCatalogRepository().apply {
+            add(catalogProduct(pairings = listOf("Pork", "Social drink")))
+        }
+        val repo = FakeBeerRepository()
+        val vm = AddEditBeerViewModel(repo, catalog)
+
+        vm.prefillFromCatalog("1324515")
+        advanceUntilIdle()
+        vm.update { it.copy(pairings = it.pairings - "Pork") }
+        vm.save()
+        advanceUntilIdle()
+
+        assertEquals(listOf("Social drink"), repo.observeBeers().first().single().goesWellWith)
+    }
 }
 
 private class ControlledBeerRepository(

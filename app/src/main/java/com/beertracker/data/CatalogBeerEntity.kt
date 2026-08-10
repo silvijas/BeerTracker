@@ -16,6 +16,7 @@ data class CatalogBeerEntity(
     val price: Double?,
     val country: String?,
     val imageUrl: String?,
+    val pairings: List<String>,
 )
 
 /**
@@ -42,6 +43,7 @@ fun CatalogBeerEntity.toDomain() = CatalogProduct(
     price = price,
     country = country,
     imageUrl = imageUrl,
+    pairings = pairings,
 )
 
 fun CatalogProduct.toEntity() = CatalogBeerEntity(
@@ -55,4 +57,5 @@ fun CatalogProduct.toEntity() = CatalogBeerEntity(
     price = price,
     country = country,
     imageUrl = imageUrl,
+    pairings = pairings,
 )

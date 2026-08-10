@@ -56,6 +56,28 @@ class RoomCatalogRepositoryTest {
     }
 
     @Test
+    fun `pairings round trip through the catalog database`() = runTest {
+        db.catalogDao().insertAll(
+            listOf(
+                catalogProduct(
+                    articleNumber = "2000001",
+                    articleNumberShort = "20000",
+                    pairings = listOf("Pork", "Social drink"),
+                ).toEntity(),
+            ),
+        )
+        assertEquals(
+            listOf("Pork", "Social drink"),
+            repo.findByArticleNumber("2000001")?.pairings,
+        )
+    }
+
+    @Test
+    fun `a product with no pairings comes back with an empty list`() = runTest {
+        assertEquals(emptyList<String>(), repo.findByArticleNumber("1324515")?.pairings)
+    }
+
+    @Test
     fun `finds by short article number`() = runTest {
         assertEquals("Omnipollo Prodigal Pale Ale", repo.findByArticleNumber("13245")?.name)
     }
