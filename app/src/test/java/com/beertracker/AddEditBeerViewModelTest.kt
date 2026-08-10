@@ -1,6 +1,7 @@
 package com.beertracker
 
 import com.beertracker.domain.BeerRepository
+import com.beertracker.domain.Pairing
 import com.beertracker.domain.TriedBeer
 import com.beertracker.ui.AddEditBeerViewModel
 import com.beertracker.ui.EditLoadState
@@ -634,6 +635,26 @@ class AddEditBeerViewModelTest {
 
         assertEquals("Omnipollo Prodigal Pale Ale", vm.form.value.name)
         assertEquals(0, vm.catalogSuggestions.value.size)
+    }
+
+    @Test
+    fun `pairing options are the whole vocabulary in order`() = runTest {
+        val vm = AddEditBeerViewModel(FakeBeerRepository())
+        backgroundScope.launch { vm.pairingOptions.collect { } }
+        advanceUntilIdle()
+
+        assertEquals(Pairing.entries.map { it.label }, vm.pairingOptions.value)
+    }
+
+    @Test
+    fun `pairing options append custom values saved on other beers`() = runTest {
+        val repo = FakeBeerRepository()
+        repo.addBeer(beer(id = "a", goesWellWith = listOf("Pork", "Tacos")))
+        val vm = AddEditBeerViewModel(repo)
+        backgroundScope.launch { vm.pairingOptions.collect { } }
+        advanceUntilIdle()
+
+        assertEquals(Pairing.entries.map { it.label } + "Tacos", vm.pairingOptions.value)
     }
 }
 

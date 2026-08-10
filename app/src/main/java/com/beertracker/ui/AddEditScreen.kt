@@ -58,7 +58,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.beertracker.R
 import com.beertracker.domain.CatalogProduct
+import com.beertracker.domain.Pairing
 import com.beertracker.ui.components.BeerCan
+import com.beertracker.ui.components.PairingIcon
 import com.beertracker.ui.components.ErrorState
 import com.beertracker.ui.components.FlagToggleRow
 import com.beertracker.ui.components.LoadingState
@@ -427,6 +429,12 @@ private fun BeerForm(
                         }
                     },
                     label = { Text(option) },
+                    leadingIcon = {
+                        val pairing = Pairing.fromLabel(option)
+                        if (pairing != null) {
+                            PairingIcon(pairing = pairing, size = 18.dp)
+                        }
+                    },
                     enabled = enabled,
                 )
             }

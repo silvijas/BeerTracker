@@ -10,6 +10,7 @@ import com.beertracker.domain.BeerRepository
 import com.beertracker.domain.CatalogBrowseLogic
 import com.beertracker.domain.CatalogProduct
 import com.beertracker.domain.CatalogRepository
+import com.beertracker.domain.Pairing
 import com.beertracker.domain.Presets
 import com.beertracker.domain.TriedBeer
 import java.util.UUID
@@ -83,9 +84,23 @@ class AddEditBeerViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Presets.beerTypes)
 
+    /**
+     * The whole pairing vocabulary, always, followed by any value a saved
+     * beer carries that is not in it, so a pairing typed once stays reusable.
+     */
     val pairingOptions: StateFlow<List<String>> = repository.observeBeers()
-        .map { beers -> (Presets.pairings + beers.flatMap { it.goesWellWith }).distinct() }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Presets.pairings)
+        .map { beers ->
+            val custom = beers
+                .flatMap { it.goesWellWith }
+                .filter { Pairing.fromLabel(it) == null }
+                .distinct()
+            Pairing.entries.map { it.label } + custom
+        }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            Pairing.entries.map { it.label },
+        )
 
     private var existing: TriedBeer? = null
     private var loadedBeerId: String? = null
