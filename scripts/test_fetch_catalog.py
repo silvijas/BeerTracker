@@ -27,6 +27,7 @@ SAMPLE_BEER = {
     "volume": 330.0,
     "price": 25.9,
     "country": "Sverige",
+    "tasteSymbols": ["Lamm", "Fläsk", "Sällskapsdryck"],
     "images": [
         {"imageUrl": "https://product-cdn.systembolaget.se/productimages/50786609/50786609"}
     ],
@@ -62,6 +63,7 @@ class MapProductTest(unittest.TestCase):
                 "price": 25.9,
                 "country": "Sverige",
                 "imageUrl": "https://product-cdn.systembolaget.se/productimages/50786609/50786609",
+                "pairings": ["Pork", "Lamb", "Social drink"],
             },
         )
 
@@ -77,6 +79,7 @@ class MapProductTest(unittest.TestCase):
         self.assertIsNone(mapped["price"])
         self.assertIsNone(mapped["country"])
         self.assertIsNone(mapped["imageUrl"])
+        self.assertEqual(mapped["pairings"], [])
 
     def test_type_falls_back_to_category_level_3(self):
         product = dict(SAMPLE_BEER, categoryLevel2=None)
@@ -85,6 +88,16 @@ class MapProductTest(unittest.TestCase):
     def test_empty_image_list_gives_none(self):
         product = dict(SAMPLE_BEER, images=[])
         self.assertIsNone(fetch_catalog.map_product(product)["imageUrl"])
+
+    def test_drops_a_symbol_the_app_does_not_know(self):
+        product = dict(SAMPLE_BEER, tasteSymbols=["Fläsk", "Choklad"])
+        self.assertEqual(fetch_catalog.map_product(product)["pairings"], ["Pork"])
+
+    def test_pairings_come_out_in_vocabulary_order(self):
+        product = dict(SAMPLE_BEER, tasteSymbols=["Sällskapsdryck", "Fläsk"])
+        self.assertEqual(
+            fetch_catalog.map_product(product)["pairings"], ["Pork", "Social drink"]
+        )
 
 
 class PageUrlTest(unittest.TestCase):

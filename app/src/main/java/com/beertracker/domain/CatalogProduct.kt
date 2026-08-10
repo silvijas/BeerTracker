@@ -16,6 +16,12 @@ data class CatalogProduct(
     val price: Double?,
     val country: String?,
     val imageUrl: String?,
+    /**
+     * Systembolaget's food pairing symbols for this product, already mapped
+     * to [Pairing] labels and ordered by the vocabulary. Empty when the
+     * product has none, which is common.
+     */
+    val pairings: List<String> = emptyList(),
 ) {
     /**
      * The catalog stores the CDN base URL without an extension. Appending

@@ -1,6 +1,7 @@
 package com.beertracker.data
 
 import com.beertracker.domain.CatalogProduct
+import com.beertracker.domain.Pairing
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
@@ -114,6 +115,20 @@ internal fun isBeer(product: JSONObject): Boolean =
     product.optString("categoryLevel1") == "Öl"
 
 /**
+ * Maps Systembolaget's Swedish tasteSymbols to the app's English pairing
+ * labels, in vocabulary order. A symbol the app does not know is dropped
+ * rather than passed through, so a symbol added upstream cannot leak Swedish
+ * text into an English UI; it simply does not appear until Pairing gains it.
+ */
+internal fun mapPairings(product: JSONObject): List<String> {
+    val symbols = product.optJSONArray("tasteSymbols") ?: return emptyList()
+    val found = (0 until symbols.length())
+        .mapNotNull { Pairing.fromSymbol(symbols.optString(it)) }
+        .toSet()
+    return Pairing.entries.filter { it in found }.map { it.label }
+}
+
+/**
  * Maps one raw API product to the catalog model. Must stay field for field
  * identical to map_product in scripts/fetch_catalog.py; both test suites use
  * the same sample product to hold the two mappers together.
@@ -141,6 +156,7 @@ internal fun mapProduct(product: JSONObject): CatalogProduct {
         // must stay "" instead of collapsing to null like the other fields do.
         country = if (product.isNull("country")) null else product.getString("country"),
         imageUrl = imageUrl,
+        pairings = mapPairings(product),
     )
 }
 

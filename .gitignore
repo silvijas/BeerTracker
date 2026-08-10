@@ -11,3 +11,6 @@ captures/
 *.jks
 *.keystore
 *.p12
+
+# Python bytecode from the dev scripts
+__pycache__/

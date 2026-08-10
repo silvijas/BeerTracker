@@ -33,6 +33,7 @@ private fun JSONObject.toCatalogProduct() = CatalogProduct(
     price = optDoubleOrNull("price"),
     country = optStringOrNull("country"),
     imageUrl = optStringOrNull("imageUrl"),
+    pairings = optStringList("pairings"),
 )
 
 /** Absent keys, JSON nulls, and empty strings all become Kotlin null. */
@@ -42,3 +43,12 @@ internal fun JSONObject.optStringOrNull(key: String): String? =
 /** Absent keys and JSON nulls become Kotlin null instead of NaN. */
 internal fun JSONObject.optDoubleOrNull(key: String): Double? =
     if (isNull(key)) null else optDouble(key).takeIf { !it.isNaN() }
+
+/**
+ * Absent keys, JSON nulls, and empty arrays all become an empty list. Older
+ * assets predate the pairings field entirely, so this must never throw.
+ */
+internal fun JSONObject.optStringList(key: String): List<String> {
+    val array = optJSONArray(key) ?: return emptyList()
+    return (0 until array.length()).map { array.optString(it) }.filter { it.isNotEmpty() }
+}

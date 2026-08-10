@@ -37,6 +37,7 @@ class SystembolagetCatalogFetcherTest {
          "volume": 330.0,
          "price": 25.9,
          "country": "Sverige",
+         "tasteSymbols": ["Lamm", "Fläsk", "Sällskapsdryck"],
          "images": [{"imageUrl": "https://product-cdn.systembolaget.se/productimages/50786609/50786609"}]
         }
     """.trimIndent()
@@ -61,7 +62,10 @@ class SystembolagetCatalogFetcherTest {
 
     @Test
     fun `mapProduct maps every field exactly like the seed script`() {
-        assertEquals(catalogProduct(), mapProduct(JSONObject(sampleBeer)))
+        assertEquals(
+            catalogProduct(pairings = listOf("Pork", "Lamb", "Social drink")),
+            mapProduct(JSONObject(sampleBeer)),
+        )
     }
 
     @Test
@@ -77,6 +81,7 @@ class SystembolagetCatalogFetcherTest {
         assertNull(mapped.price)
         assertNull(mapped.country)
         assertNull(mapped.imageUrl)
+        assertEquals(emptyList<String>(), mapped.pairings)
     }
 
     @Test
@@ -107,6 +112,27 @@ class SystembolagetCatalogFetcherTest {
     fun `mapProduct rounds volume half to even exactly like the seed script`() {
         val json = JSONObject(sampleBeer).put("volume", 330.5)
         assertEquals(330, mapProduct(json).volumeMl)
+    }
+
+    @Test
+    fun `mapProduct maps taste symbols to labels in vocabulary order`() {
+        assertEquals(
+            listOf("Pork", "Lamb", "Social drink"),
+            mapProduct(JSONObject(sampleBeer)).pairings,
+        )
+    }
+
+    @Test
+    fun `mapProduct drops a symbol the app does not know`() {
+        val json = JSONObject(sampleBeer)
+            .put("tasteSymbols", JSONArray(listOf("Fläsk", "Choklad")))
+        assertEquals(listOf("Pork"), mapProduct(json).pairings)
+    }
+
+    @Test
+    fun `mapProduct gives an empty pairing list when the key is absent`() {
+        val json = JSONObject("""{"productNumber": "42", "categoryLevel1": "Öl"}""")
+        assertEquals(emptyList<String>(), mapProduct(json).pairings)
     }
 
     private fun page(products: String, nextPage: Int) =

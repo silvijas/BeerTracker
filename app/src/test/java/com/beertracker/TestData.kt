@@ -52,6 +52,7 @@ fun catalogProduct(
     price: Double? = 25.9,
     country: String? = "Sverige",
     imageUrl: String? = "https://product-cdn.systembolaget.se/productimages/50786609/50786609",
+    pairings: List<String> = emptyList(),
 ) = CatalogProduct(
     articleNumber = articleNumber,
     articleNumberShort = articleNumberShort,
@@ -63,4 +64,5 @@ fun catalogProduct(
     price = price,
     country = country,
     imageUrl = imageUrl,
+    pairings = pairings,
 )

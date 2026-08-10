@@ -59,6 +59,35 @@ def is_beer(product):
     return product.get("categoryLevel1") == "Öl"
 
 
+# Must stay identical to the Pairing enum in
+# app/src/main/java/com/beertracker/domain/Pairing.kt: same entries, same
+# order, same English labels. The order here is the display order in the app.
+PAIRING_LABELS = [
+    ("Fläsk", "Pork"),
+    ("Fågel", "Poultry"),
+    ("Lamm", "Lamb"),
+    ("Nöt", "Beef"),
+    ("Vilt", "Game"),
+    ("Fisk", "Fish"),
+    ("Skaldjur", "Shellfish"),
+    ("Grönsaker", "Vegetables"),
+    ("Ost", "Cheese"),
+    ("Dessert", "Dessert"),
+    ("Kryddstarkt", "Spicy food"),
+    ("Asiatiskt", "Asian food"),
+    ("Buffémat", "Buffet"),
+    ("Aperitif", "Aperitif"),
+    ("Sällskapsdryck", "Social drink"),
+]
+
+
+def map_pairings(product):
+    """Maps tasteSymbols to English labels in vocabulary order, dropping any
+    symbol the app does not know."""
+    symbols = set(product.get("tasteSymbols") or [])
+    return [label for symbol, label in PAIRING_LABELS if symbol in symbols]
+
+
 def map_product(product):
     """Maps one raw API product to the minimal bundled schema.
 
@@ -88,6 +117,7 @@ def map_product(product):
         "price": product.get("price"),
         "country": product.get("country"),
         "imageUrl": image_url,
+        "pairings": map_pairings(product),
     }
 
 
