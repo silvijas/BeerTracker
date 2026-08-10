@@ -112,6 +112,11 @@
     <string name="pairing_buffet">Buffet</string>
     <string name="pairing_aperitif">Aperitif</string>
     <string name="pairing_social">Social drink</string>
+    <string name="beer_photo_section">Photo</string>
+    <string name="take_photo">Take photo</string>
+    <string name="choose_photo">Choose photo</string>
+    <string name="remove_photo">Remove photo</string>
+    <string name="photo_error">Could not save that photo. Try again.</string>
     <string name="detail_error_title">Could not open this beer</string>
     <string name="detail_error_message">Return to the cellar and try again.</string>
     <string name="scan_action">Scan</string>

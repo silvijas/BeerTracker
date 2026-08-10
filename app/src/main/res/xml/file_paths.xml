@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Matches BeerPhotoStore.DIRECTORY. The camera needs a content URI to
+         write into; nothing else under files/ is shared. -->
+    <files-path
+        name="beer-photos"
+        path="beer-photos/" />
+</paths>
