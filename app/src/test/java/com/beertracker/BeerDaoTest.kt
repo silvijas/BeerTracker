@@ -3,7 +3,10 @@ package com.beertracker
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.beertracker.data.BeerDatabase
+import com.beertracker.data.BeerPhotoStore
 import com.beertracker.data.RoomBeerRepository
+import java.io.File
+import java.net.URI
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -12,7 +15,9 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -20,6 +25,9 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class BeerDaoTest {
+
+    @get:Rule
+    val temporaryFolder = TemporaryFolder()
 
     private lateinit var db: BeerDatabase
     private lateinit var repo: RoomBeerRepository
@@ -81,5 +89,36 @@ class BeerDaoTest {
         repo.deleteBeer("a")
         assertNull(repo.getBeer("a"))
         assertEquals(emptyList<Any>(), repo.observeBeers().first())
+    }
+
+    @Test
+    fun `deleting a beer deletes its photo file`() = runTest {
+        val photoStore = BeerPhotoStore(temporaryFolder.root)
+        val uri = photoStore.save("photo".byteInputStream())
+        val repoWithPhotos = RoomBeerRepository(db.beerDao(), photoStore)
+        repoWithPhotos.addBeer(beer(id = "a").copy(photoUri = uri))
+
+        repoWithPhotos.deleteBeer("a")
+
+        assertFalse(File(URI(uri)).exists())
+    }
+
+    @Test
+    fun `deleting a beer with no photo does not throw`() = runTest {
+        val repoWithPhotos = RoomBeerRepository(
+            db.beerDao(),
+            BeerPhotoStore(temporaryFolder.root),
+        )
+        repoWithPhotos.addBeer(beer(id = "a"))
+
+        repoWithPhotos.deleteBeer("a")
+
+        assertNull(repoWithPhotos.getBeer("a"))
+    }
+
+    @Test
+    fun `photoUri round trips`() = runTest {
+        repo.addBeer(beer(id = "a").copy(photoUri = "file:///photos/a.jpg"))
+        assertEquals("file:///photos/a.jpg", repo.getBeer("a")?.photoUri)
     }
 }

@@ -58,6 +58,7 @@ data class BeerFormState(
     val favourite: Boolean = false,
     val catalogArticleNumber: String? = null,
     val imageUrl: String? = null,
+    val photoUri: String? = null,
     val nameError: Boolean = false,
     val gradeError: Boolean = false,
     val alcoholError: Boolean = false,
@@ -166,6 +167,7 @@ class AddEditBeerViewModel(
                     pairings = loaded.goesWellWith.toSet(),
                     catalogArticleNumber = loaded.catalogArticleNumber,
                     imageUrl = loaded.imageUrl,
+                    photoUri = loaded.photoUri,
                     buyAgain = loaded.buyAgain,
                     favourite = loaded.favourite,
                     loadState = EditLoadState.Content,
@@ -253,6 +255,15 @@ class AddEditBeerViewModel(
         it.copy(grade = value, tried = it.tried || value != null, gradeError = false)
     }
 
+    /**
+     * Attaches or clears the user's own photo. Clearing leaves imageUrl
+     * alone, so the beer falls back to its catalog picture. The superseded
+     * file is not deleted here: the user can still discard this edit, and
+     * the saved row would then point at a file already removed. Reclamation
+     * is BeerPhotoStore.deleteOrphans at app start.
+     */
+    fun setPhoto(uri: String?) = update { it.copy(photoUri = uri) }
+
     /** Turning tried off clears the grade, which keeps the domain invariant satisfied. */
     fun setTried(value: Boolean) = update {
         if (value) {
@@ -303,6 +314,7 @@ class AddEditBeerViewModel(
             catalogArticleNumber = f.catalogArticleNumber,
             addedBy = existing?.addedBy,
             imageUrl = f.imageUrl,
+            photoUri = f.photoUri,
         )
         _form.update { it.copy(saveState = SaveState.Saving, saved = false) }
         viewModelScope.launch {

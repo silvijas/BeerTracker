@@ -686,6 +686,39 @@ class AddEditBeerViewModelTest {
 
         assertEquals(listOf("Social drink"), repo.observeBeers().first().single().goesWellWith)
     }
+
+    @Test
+    fun `a photo survives save and load`() = runTest {
+        val repo = FakeBeerRepository()
+        val vm = AddEditBeerViewModel(repo)
+        vm.update { it.copy(name = "Punk IPA") }
+        vm.setPhoto("file:///photos/a.jpg")
+        vm.save()
+        advanceUntilIdle()
+
+        assertEquals("file:///photos/a.jpg", repo.observeBeers().first().single().photoUri)
+    }
+
+    @Test
+    fun `removing a photo clears the field and leaves the catalog image alone`() = runTest {
+        val vm = AddEditBeerViewModel(FakeBeerRepository())
+        vm.update { it.copy(name = "X", imageUrl = "https://cdn/x.jpg") }
+
+        vm.setPhoto("file:///photos/a.jpg")
+        assertEquals("file:///photos/a.jpg", vm.form.value.photoUri)
+
+        vm.setPhoto(null)
+        assertNull(vm.form.value.photoUri)
+        assertEquals("https://cdn/x.jpg", vm.form.value.imageUrl)
+    }
+
+    @Test
+    fun `attaching a photo counts as an unsaved change`() = runTest {
+        val vm = AddEditBeerViewModel(FakeBeerRepository())
+        vm.setPhoto("file:///photos/a.jpg")
+
+        assertTrue(vm.form.value.hasUnsavedChanges)
+    }
 }
 
 private class ControlledBeerRepository(

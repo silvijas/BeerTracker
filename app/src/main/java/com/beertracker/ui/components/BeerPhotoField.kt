@@ -88,17 +88,19 @@ fun BeerPhotoField(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(BeerTrackerSpacing.small),
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(160.dp)
-                .clip(MaterialTheme.shapes.large)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (imageUrl == null) {
-                BeerCan(filled = false, height = 72.dp, alpha = 0.6f)
-            } else {
+        // Only drawn when there is something to draw. A large empty
+        // placeholder here would push the name field, and the catalog
+        // suggestions under it, below the fold on the add form, which is
+        // exactly where the user starts.
+        if (imageUrl != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+                    .clip(MaterialTheme.shapes.large)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center,
+            ) {
                 AsyncImage(
                     model = imageUrl,
                     contentDescription = null,

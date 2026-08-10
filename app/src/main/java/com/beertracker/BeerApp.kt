@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.util.Log
 import com.beertracker.data.BeerDatabase
+import com.beertracker.data.BeerPhotoStore
 import com.beertracker.data.CatalogDatabase
 import com.beertracker.data.CatalogImporter
 import com.beertracker.data.DefaultCatalogRefresher
@@ -26,7 +27,8 @@ import kotlinx.coroutines.launch
 
 class AppContainer(context: Context) {
     private val db = BeerDatabase.build(context)
-    val beerRepository: BeerRepository = RoomBeerRepository(db.beerDao())
+    val beerPhotoStore = BeerPhotoStore(context.filesDir)
+    val beerRepository: BeerRepository = RoomBeerRepository(db.beerDao(), beerPhotoStore)
 
     private val catalogDb = CatalogDatabase.build(context)
     val catalogRepository: CatalogRepository = RoomCatalogRepository(catalogDb.catalogDao())
@@ -50,7 +52,26 @@ class BeerApp : Application() {
         container = AppContainer(this)
         applicationScope.launch {
             container.catalogImporter.importIfNeeded()
+            deleteOrphanPhotos()
             autoRefreshCatalog()
+        }
+    }
+
+    /**
+     * Reclaims photo files no beer points at any more: replaced photos,
+     * removed photos, and photos taken on an add form that was abandoned.
+     * Doing it here rather than at the moment of replacement means an
+     * abandoned edit can never delete a file the saved row still uses.
+     */
+    private suspend fun deleteOrphanPhotos() {
+        try {
+            val referenced = container.beerRepository.observeBeers().first()
+                .mapNotNull { it.photoUri }
+                .toSet()
+            container.beerPhotoStore.deleteOrphans(referenced)
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            Log.w(TAG, "Orphan photo sweep failed, files stay as they are", error)
         }
     }
 

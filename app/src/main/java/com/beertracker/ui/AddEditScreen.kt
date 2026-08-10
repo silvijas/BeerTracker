@@ -42,12 +42,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -56,10 +58,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import com.beertracker.R
+import com.beertracker.data.BeerPhotoStore
 import com.beertracker.domain.CatalogProduct
 import com.beertracker.domain.Pairing
 import com.beertracker.ui.components.BeerCan
+import com.beertracker.ui.components.BeerPhotoField
 import com.beertracker.ui.components.PairingIcon
 import com.beertracker.ui.components.ErrorState
 import com.beertracker.ui.components.FlagToggleRow
@@ -105,6 +110,14 @@ fun AddEditScreen(
     var showDiscardDialog by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val saveErrorMessage = stringResource(R.string.save_error_message)
+    val photoErrorMessage = stringResource(R.string.photo_error)
+    val scope = rememberCoroutineScope()
+    // Built from the context rather than pulled off the application
+    // container: the store is a stateless wrapper around one directory, so
+    // two instances agree, and this keeps the screen testable under a plain
+    // Application.
+    val context = LocalContext.current
+    val photoStore = remember(context) { BeerPhotoStore(context.applicationContext.filesDir) }
 
     LaunchedEffect(form.saved) {
         if (form.saved) onDone()
@@ -225,6 +238,11 @@ fun AddEditScreen(
                     onUpdate = viewModel::update,
                     onSetTried = viewModel::setTried,
                     onSetGrade = viewModel::setGrade,
+                    photoStore = photoStore,
+                    onSetPhoto = viewModel::setPhoto,
+                    onPhotoError = {
+                        scope.launch { snackbarHostState.showSnackbar(photoErrorMessage) }
+                    },
                     modifier = Modifier.padding(padding),
                 )
             }
@@ -265,6 +283,9 @@ private fun BeerForm(
     onUpdate: ((BeerFormState) -> BeerFormState) -> Unit,
     onSetTried: (Boolean) -> Unit,
     onSetGrade: (Int?) -> Unit,
+    photoStore: BeerPhotoStore,
+    onSetPhoto: (String?) -> Unit,
+    onPhotoError: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -274,7 +295,21 @@ private fun BeerForm(
             .padding(horizontal = BeerTrackerSpacing.large, vertical = BeerTrackerSpacing.small),
         verticalArrangement = Arrangement.spacedBy(BeerTrackerSpacing.medium),
     ) {
-        SectionHeader(stringResource(R.string.basics_section))
+        SectionHeader(stringResource(R.string.beer_photo_section))
+        BeerPhotoField(
+            imageUrl = form.photoUri ?: form.imageUrl,
+            hasPhoto = form.photoUri != null,
+            enabled = enabled,
+            photoStore = photoStore,
+            onPhotoPicked = onSetPhoto,
+            onRemovePhoto = { onSetPhoto(null) },
+            onError = onPhotoError,
+        )
+
+        SectionHeader(
+            stringResource(R.string.basics_section),
+            modifier = Modifier.padding(top = BeerTrackerSpacing.large),
+        )
         var nameFocused by remember { mutableStateOf(false) }
         OutlinedTextField(
             value = form.name,
