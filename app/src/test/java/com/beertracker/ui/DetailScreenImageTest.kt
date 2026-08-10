@@ -5,9 +5,12 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import coil.Coil
 import coil.ImageLoader
@@ -20,6 +23,8 @@ import com.beertracker.beer
 import com.beertracker.ui.theme.BeerTrackerTheme
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -68,6 +73,7 @@ class DetailScreenImageTest {
                 DetailScreen(
                     viewModel = DetailViewModel(repo, "a"),
                     onEdit = {},
+                    onBreweryClick = {},
                     onBack = {},
                 )
             }
@@ -86,6 +92,7 @@ class DetailScreenImageTest {
                 DetailScreen(
                     viewModel = DetailViewModel(repo, "a"),
                     onEdit = {},
+                    onBreweryClick = {},
                     onBack = {},
                 )
             }
@@ -93,6 +100,52 @@ class DetailScreenImageTest {
 
         composeRule.onNodeWithContentDescription("Product image for Punk IPA").assertDoesNotExist()
         composeRule.onNodeWithText("Punk IPA").assertIsDisplayed()
+    }
+
+    @Test
+    fun `tapping the brewery name invokes the brewery callback`() {
+        val repo = FakeBeerRepository()
+        runBlocking {
+            repo.addBeer(beer(id = "a", name = "Punk IPA", brewery = "BrewDog"))
+        }
+        var clicked: String? = null
+
+        composeRule.setContent {
+            BeerTrackerTheme {
+                DetailScreen(
+                    viewModel = DetailViewModel(repo, "a"),
+                    onEdit = {},
+                    onBreweryClick = { clicked = it },
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("BrewDog").performClick()
+        assertEquals("BrewDog", clicked)
+    }
+
+    @Test
+    fun `a blank brewery is not shown and never invokes the callback`() {
+        val repo = FakeBeerRepository()
+        runBlocking {
+            repo.addBeer(beer(id = "a", name = "Mystery Can", brewery = ""))
+        }
+        var clicked: String? = null
+
+        composeRule.setContent {
+            BeerTrackerTheme {
+                DetailScreen(
+                    viewModel = DetailViewModel(repo, "a"),
+                    onEdit = {},
+                    onBreweryClick = { clicked = it },
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Mystery Can").assertIsDisplayed()
+        assertNull(clicked)
     }
 
     // Installed as the Coil singleton in installFakeImageLoader() so every AsyncImage in this

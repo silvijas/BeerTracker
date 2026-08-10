@@ -1,6 +1,7 @@
 package com.beertracker.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -58,6 +59,7 @@ import java.time.format.FormatStyle
 fun DetailScreen(
     viewModel: DetailViewModel,
     onEdit: (String) -> Unit,
+    onBreweryClick: (String) -> Unit,
     onBack: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -129,6 +131,7 @@ fun DetailScreen(
                     beer = current.beer,
                     onToggleFavourite = viewModel::toggleFavourite,
                     onToggleBuyAgain = viewModel::toggleBuyAgain,
+                    onBreweryClick = onBreweryClick,
                     modifier = Modifier.padding(padding),
                 )
             }
@@ -164,6 +167,7 @@ private fun DetailContent(
     beer: TriedBeer,
     onToggleFavourite: () -> Unit,
     onToggleBuyAgain: () -> Unit,
+    onBreweryClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -202,6 +206,7 @@ private fun DetailContent(
                         beer.brewery,
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.clickable { onBreweryClick(beer.brewery) },
                     )
                 }
                 if (beer.type.isNotBlank()) {
@@ -346,6 +351,7 @@ private fun DetailContentPreview() {
             ),
             onToggleFavourite = {},
             onToggleBuyAgain = {},
+            onBreweryClick = {},
         )
     }
 }

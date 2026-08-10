@@ -114,6 +114,7 @@ fun BeerNavHost(
             DetailScreen(
                 viewModel = viewModel(factory = DetailViewModel.factory(beerId)),
                 onEdit = { id -> navController.navigate("edit?beerId=$id") },
+                onBreweryClick = { },
                 onBack = { navController.popBackStack() },
             )
         }
