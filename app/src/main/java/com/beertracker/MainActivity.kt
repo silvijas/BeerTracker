@@ -1,5 +1,6 @@
 package com.beertracker
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -21,6 +22,8 @@ import com.beertracker.ui.DetailScreen
 import com.beertracker.ui.DetailViewModel
 import com.beertracker.ui.OverviewScreen
 import com.beertracker.ui.OverviewViewModel
+import com.beertracker.ui.brewery.BreweryBeersScreen
+import com.beertracker.ui.brewery.BreweryBeersViewModel
 import com.beertracker.ui.catalog.CatalogBrowserScreen
 import com.beertracker.ui.catalog.CatalogBrowserViewModel
 import com.beertracker.ui.scan.ScanScreen
@@ -114,7 +117,21 @@ fun BeerNavHost(
             DetailScreen(
                 viewModel = viewModel(factory = DetailViewModel.factory(beerId)),
                 onEdit = { id -> navController.navigate("edit?beerId=$id") },
-                onBreweryClick = { },
+                onBreweryClick = { brewery -> navController.navigate("brewery/${Uri.encode(brewery)}") },
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable("brewery/{breweryName}") { backStackEntry ->
+            val breweryName = backStackEntry.arguments?.getString("breweryName")
+                ?.let(Uri::decode)
+                ?: return@composable
+            BreweryBeersScreen(
+                viewModel = viewModel(factory = BreweryBeersViewModel.factory(breweryName)),
+                breweryName = breweryName,
+                onAddProduct = { articleNumber ->
+                    navController.navigate("edit?prefillArticle=$articleNumber")
+                },
+                onOpenBeer = { id -> navController.navigate("detail/$id") },
                 onBack = { navController.popBackStack() },
             )
         }
