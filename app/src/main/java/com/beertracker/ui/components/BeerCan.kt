@@ -48,7 +48,6 @@ internal fun BeerCan(
     filled: Boolean,
     height: Dp,
     modifier: Modifier = Modifier,
-    alpha: Float = 1f,
 ) {
     val tint = if (filled) {
         MaterialTheme.colorScheme.tertiary
@@ -61,6 +60,6 @@ internal fun BeerCan(
         modifier = modifier
             .height(height)
             .width(height * BEER_CAN_ASPECT_RATIO),
-        tint = tint.copy(alpha = tint.alpha * alpha),
+        tint = tint,
     )
 }

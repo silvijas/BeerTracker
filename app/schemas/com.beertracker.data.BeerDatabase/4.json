@@ -1,12 +1,12 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 3,
-    "identityHash": "f4333e92ad5664add1fd597a18564390",
+    "version": 4,
+    "identityHash": "a56e29e66a8719a961ca1d071a66119f",
     "entities": [
       {
         "tableName": "tried_beers",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `brewery` TEXT NOT NULL, `type` TEXT NOT NULL, `alcoholPercent` REAL, `volumeMl` INTEGER, `price` REAL, `grade` INTEGER, `tried` INTEGER NOT NULL, `note` TEXT NOT NULL, `aftertaste` TEXT NOT NULL, `goesWellWith` TEXT NOT NULL, `buyAgain` INTEGER NOT NULL, `favourite` INTEGER NOT NULL, `dateAdded` INTEGER NOT NULL, `catalogArticleNumber` TEXT, `addedBy` TEXT, `imageUrl` TEXT, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `brewery` TEXT NOT NULL, `type` TEXT NOT NULL, `alcoholPercent` REAL, `volumeMl` INTEGER, `price` REAL, `grade` INTEGER, `tried` INTEGER NOT NULL, `note` TEXT NOT NULL, `aftertaste` TEXT NOT NULL, `goesWellWith` TEXT NOT NULL, `buyAgain` INTEGER NOT NULL, `favourite` INTEGER NOT NULL, `dateAdded` INTEGER NOT NULL, `catalogArticleNumber` TEXT, `addedBy` TEXT, `imageUrl` TEXT, `photoUri` TEXT, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -115,6 +115,12 @@
             "columnName": "imageUrl",
             "affinity": "TEXT",
             "notNull": false
+          },
+          {
+            "fieldPath": "photoUri",
+            "columnName": "photoUri",
+            "affinity": "TEXT",
+            "notNull": false
           }
         ],
         "primaryKey": {
@@ -130,7 +136,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f4333e92ad5664add1fd597a18564390')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a56e29e66a8719a961ca1d071a66119f')"
     ]
   }
 }

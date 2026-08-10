@@ -7,6 +7,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
@@ -33,7 +34,11 @@ fun BeerThumbnail(
         contentAlignment = Alignment.Center,
     ) {
         if (model == null) {
-            BeerCan(filled = false, height = size * 0.6f, alpha = 0.6f)
+            BeerCan(
+                filled = false,
+                height = size * 0.6f,
+                modifier = Modifier.alpha(0.6f),
+            )
         } else {
             AsyncImage(
                 model = model,

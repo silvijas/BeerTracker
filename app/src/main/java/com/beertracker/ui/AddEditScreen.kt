@@ -503,9 +503,8 @@ private fun BeerForm(
 }
 
 /**
- * Ten-can grade track in two rows of five. Grades below five are not on the
- * scale, so those cans stay dimmed and inert. Tapping the current grade
- * clears it, matching the previous picker behaviour.
+ * Five-can grade track. Tapping the current grade clears it, matching the
+ * previous picker's behaviour.
  */
 @Composable
 private fun GradeCanPicker(
@@ -513,39 +512,25 @@ private fun GradeCanPicker(
     enabled: Boolean,
     onSetGrade: (Int?) -> Unit,
 ) {
-    val gradeRange = 5..10
-    Column(verticalArrangement = Arrangement.spacedBy(BeerTrackerSpacing.xSmall)) {
-        listOf(1..5, 6..10).forEach { slots ->
-            Row(horizontalArrangement = Arrangement.spacedBy(BeerTrackerSpacing.xSmall)) {
-                slots.forEach { slot ->
-                    val filled = grade != null && slot <= grade
-                    if (slot in gradeRange) {
-                        val selected = grade == slot
-                        val description = stringResource(R.string.grade_value, slot)
-                        Box(
-                            modifier = Modifier
-                                .size(width = 40.dp, height = 52.dp)
-                                .clip(MaterialTheme.shapes.extraSmall)
-                                .selectable(
-                                    selected = selected,
-                                    enabled = enabled,
-                                    role = Role.RadioButton,
-                                    onClick = { onSetGrade(if (selected) null else slot) },
-                                )
-                                .semantics { contentDescription = description },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            BeerCan(filled = filled, height = 34.dp)
-                        }
-                    } else {
-                        Box(
-                            modifier = Modifier.size(width = 40.dp, height = 52.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            BeerCan(filled = false, height = 34.dp, alpha = 0.4f)
-                        }
-                    }
-                }
+    Row(horizontalArrangement = Arrangement.spacedBy(BeerTrackerSpacing.xSmall)) {
+        (1..5).forEach { slot ->
+            val filled = grade != null && slot <= grade
+            val selected = grade == slot
+            val description = stringResource(R.string.grade_value, slot)
+            Box(
+                modifier = Modifier
+                    .size(width = 40.dp, height = 52.dp)
+                    .clip(MaterialTheme.shapes.extraSmall)
+                    .selectable(
+                        selected = selected,
+                        enabled = enabled,
+                        role = Role.RadioButton,
+                        onClick = { onSetGrade(if (selected) null else slot) },
+                    )
+                    .semantics { contentDescription = description },
+                contentAlignment = Alignment.Center,
+            ) {
+                BeerCan(filled = filled, height = 34.dp)
             }
         }
     }

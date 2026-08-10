@@ -26,10 +26,7 @@ class BeerDatabaseMigrationTest {
     fun `migrating 1 to 2 preserves an existing beer and defaults imageUrl to null`() {
         helper.createDatabase(DB_NAME, 1).use { db ->
             db.execSQL(
-                "INSERT INTO tried_beers (id, name, brewery, type, alcoholPercent, volumeMl, " +
-                    "price, grade, tried, note, aftertaste, goesWellWith, buyAgain, favourite, " +
-                    "dateAdded, catalogArticleNumber, addedBy) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                INSERT_V1,
                 arrayOf(
                     "a", "Punk IPA", "BrewDog", "IPA", 5.6, 330, 29.5,
                     9, 1, "hoppy", "citrus bitter", "Red meat\u001FDessert", 1, 1,
@@ -69,24 +66,77 @@ class BeerDatabaseMigrationTest {
     }
 
     @Test
-    fun `migrating 2 to 3 adds photoUri and remaps the old pairing values`() {
+    fun `migrating 2 to 3 clears an existing grade but keeps every other column`() {
         helper.createDatabase(DB_NAME, 1).use { db ->
-            db.execSQL(INSERT_V1, arrayOf(
-                "a", "Punk IPA", "BrewDog", "IPA", 5.6, 330, 29.5,
-                4, 1, "hoppy", "citrus bitter",
-                "Red meat\u001FSalmon\u001FWhite fish\u001FDessert\u001FTacos",
-                1, 1, 12345L, "1324515", "Alex",
-            ))
-            db.execSQL(INSERT_V1, arrayOf(
-                "b", "Pasta Beer", "", "", null, null, null,
-                null, 0, "", "", "Pasta white sauce\u001FPasta tomato sauce",
-                0, 0, 1L, null, null,
-            ))
+            db.execSQL(
+                INSERT_V1,
+                arrayOf(
+                    "a", "Punk IPA", "BrewDog", "IPA", 5.6, 330, 29.5,
+                    9, 1, "hoppy", "citrus bitter", "Red meat", 1, 1,
+                    12345L, "1324515", "Alex",
+                ),
+            )
+        }
+        helper.runMigrationsAndValidate(DB_NAME, 2, true, BeerDatabase.MIGRATION_1_2)
+
+        val db = helper.runMigrationsAndValidate(DB_NAME, 3, true, BeerDatabase.MIGRATION_2_3)
+
+        db.query(
+            "SELECT id, name, brewery, type, alcoholPercent, volumeMl, price, grade, tried, " +
+                "note, aftertaste, goesWellWith, buyAgain, favourite, dateAdded, " +
+                "catalogArticleNumber, addedBy, imageUrl FROM tried_beers",
+        ).use { cursor ->
+            assertEquals(1, cursor.count)
+            assertTrue(cursor.moveToFirst())
+            assertEquals("a", cursor.getString(0))
+            assertEquals("Punk IPA", cursor.getString(1))
+            assertEquals("BrewDog", cursor.getString(2))
+            assertEquals("IPA", cursor.getString(3))
+            assertEquals(5.6, cursor.getDouble(4), 0.0)
+            assertEquals(330, cursor.getInt(5))
+            assertEquals(29.5, cursor.getDouble(6), 0.0)
+            assertTrue(cursor.isNull(7))
+            assertEquals(1, cursor.getInt(8))
+            assertEquals("hoppy", cursor.getString(9))
+            assertEquals("citrus bitter", cursor.getString(10))
+            assertEquals("Red meat", cursor.getString(11))
+            assertEquals(1, cursor.getInt(12))
+            assertEquals(1, cursor.getInt(13))
+            assertEquals(12345L, cursor.getLong(14))
+            assertEquals("1324515", cursor.getString(15))
+            assertEquals("Alex", cursor.getString(16))
+            assertTrue(cursor.isNull(17))
+        }
+    }
+
+    // The 3 to 4 tests start from a real v3 database rather than walking up
+    // from v1, so they exercise this migration alone. Walking up would let
+    // MIGRATION_2_3 clear the grade first, which would hide whether 3 to 4
+    // preserves it.
+
+    @Test
+    fun `migrating 3 to 4 adds photoUri and remaps the old pairing values`() {
+        helper.createDatabase(DB_NAME, 3).use { db ->
+            db.execSQL(
+                INSERT_V3,
+                arrayOf(
+                    "a", "Punk IPA", "BrewDog", "IPA", 5.6, 330, 29.5,
+                    4, 1, "hoppy", "citrus bitter",
+                    "Red meat\u001FSalmon\u001FWhite fish\u001FDessert\u001FTacos",
+                    1, 1, 12345L, "1324515", "Alex", null,
+                ),
+            )
+            db.execSQL(
+                INSERT_V3,
+                arrayOf(
+                    "b", "Pasta Beer", "", "", null, null, null,
+                    null, 0, "", "", "Pasta white sauce\u001FPasta tomato sauce",
+                    0, 0, 1L, null, null, null,
+                ),
+            )
         }
 
-        val db = helper.runMigrationsAndValidate(
-            DB_NAME, 3, true, BeerDatabase.MIGRATION_1_2, BeerDatabase.MIGRATION_2_3,
-        )
+        val db = helper.runMigrationsAndValidate(DB_NAME, 4, true, BeerDatabase.MIGRATION_3_4)
 
         db.query("SELECT id, goesWellWith, photoUri FROM tried_beers ORDER BY id").use { cursor ->
             assertEquals(2, cursor.count)
@@ -102,23 +152,24 @@ class BeerDatabaseMigrationTest {
     }
 
     @Test
-    fun `migrating 2 to 3 leaves every other column alone`() {
-        helper.createDatabase(DB_NAME, 1).use { db ->
-            db.execSQL(INSERT_V1, arrayOf(
-                "a", "Punk IPA", "BrewDog", "IPA", 5.6, 330, 29.5,
-                4, 1, "hoppy", "citrus bitter", "Dessert", 1, 1,
-                12345L, "1324515", "Alex",
-            ))
+    fun `migrating 3 to 4 leaves every other column alone`() {
+        helper.createDatabase(DB_NAME, 3).use { db ->
+            db.execSQL(
+                INSERT_V3,
+                arrayOf(
+                    "a", "Punk IPA", "BrewDog", "IPA", 5.6, 330, 29.5,
+                    4, 1, "hoppy", "citrus bitter", "Dessert", 1, 1,
+                    12345L, "1324515", "Alex", "https://cdn/x.jpg",
+                ),
+            )
         }
 
-        val db = helper.runMigrationsAndValidate(
-            DB_NAME, 3, true, BeerDatabase.MIGRATION_1_2, BeerDatabase.MIGRATION_2_3,
-        )
+        val db = helper.runMigrationsAndValidate(DB_NAME, 4, true, BeerDatabase.MIGRATION_3_4)
 
         db.query(
             "SELECT name, brewery, type, alcoholPercent, volumeMl, price, grade, tried, " +
                 "note, aftertaste, goesWellWith, buyAgain, favourite, dateAdded, " +
-                "catalogArticleNumber, addedBy FROM tried_beers",
+                "catalogArticleNumber, addedBy, imageUrl FROM tried_beers",
         ).use { cursor ->
             assertTrue(cursor.moveToFirst())
             assertEquals("Punk IPA", cursor.getString(0))
@@ -137,6 +188,36 @@ class BeerDatabaseMigrationTest {
             assertEquals(12345L, cursor.getLong(13))
             assertEquals("1324515", cursor.getString(14))
             assertEquals("Alex", cursor.getString(15))
+            assertEquals("https://cdn/x.jpg", cursor.getString(16))
+        }
+    }
+
+    @Test
+    fun `the whole chain from 1 to 4 runs in order`() {
+        helper.createDatabase(DB_NAME, 1).use { db ->
+            db.execSQL(
+                INSERT_V1,
+                arrayOf(
+                    "a", "Punk IPA", "BrewDog", "IPA", 5.6, 330, 29.5,
+                    9, 1, "hoppy", "citrus bitter", "Red meat\u001FSalmon", 1, 1,
+                    12345L, "1324515", "Alex",
+                ),
+            )
+        }
+
+        val db = helper.runMigrationsAndValidate(
+            DB_NAME, 4, true,
+            BeerDatabase.MIGRATION_1_2,
+            BeerDatabase.MIGRATION_2_3,
+            BeerDatabase.MIGRATION_3_4,
+        )
+
+        db.query("SELECT grade, goesWellWith, imageUrl, photoUri FROM tried_beers").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertTrue(cursor.isNull(0))
+            assertEquals("Beef\u001FFish", cursor.getString(1))
+            assertTrue(cursor.isNull(2))
+            assertTrue(cursor.isNull(3))
         }
     }
 
@@ -147,5 +228,10 @@ class BeerDatabaseMigrationTest {
                 "price, grade, tried, note, aftertaste, goesWellWith, buyAgain, favourite, " +
                 "dateAdded, catalogArticleNumber, addedBy) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        const val INSERT_V3 =
+            "INSERT INTO tried_beers (id, name, brewery, type, alcoholPercent, volumeMl, " +
+                "price, grade, tried, note, aftertaste, goesWellWith, buyAgain, favourite, " +
+                "dateAdded, catalogArticleNumber, addedBy, imageUrl) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     }
 }

@@ -38,7 +38,7 @@ internal fun remapPairings(stored: String): String {
         .joinToString(PAIRING_SEPARATOR)
 }
 
-@Database(entities = [BeerEntity::class], version = 3, exportSchema = true)
+@Database(entities = [BeerEntity::class], version = 4, exportSchema = true)
 @TypeConverters(Converters::class)
 abstract class BeerDatabase : RoomDatabase() {
     abstract fun beerDao(): BeerDao
@@ -57,11 +57,22 @@ abstract class BeerDatabase : RoomDatabase() {
         }
 
         /**
-         * v2 to v3 adds the nullable photoUri column and rewrites stored
+         * v2 to v3 moves grading from the old 5-10 scale to 1-5. No release
+         * has real graded data yet, so every existing grade is cleared
+         * instead of remapped; every other column is untouched.
+         */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("UPDATE tried_beers SET grade = NULL WHERE grade IS NOT NULL")
+            }
+        }
+
+        /**
+         * v3 to v4 adds the nullable photoUri column and rewrites stored
          * pairings onto the Systembolaget vocabulary. Non destructive on
          * every other column, for the same reason as above.
          */
-        val MIGRATION_2_3 = object : Migration(2, 3) {
+        val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE tried_beers ADD COLUMN photoUri TEXT")
                 // Collected first, then applied, so no UPDATE runs against
@@ -85,7 +96,7 @@ abstract class BeerDatabase : RoomDatabase() {
 
         fun build(context: Context): BeerDatabase =
             Room.databaseBuilder(context, BeerDatabase::class.java, "beertracker.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build()
     }
 }
