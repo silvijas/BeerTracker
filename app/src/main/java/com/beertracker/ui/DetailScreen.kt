@@ -177,9 +177,10 @@ private fun DetailContent(
             ),
         verticalArrangement = Arrangement.spacedBy(BeerTrackerSpacing.medium),
     ) {
-        if (beer.imageUrl != null) {
+        val image = beer.displayImageUrl
+        if (image != null) {
             AsyncImage(
-                model = beer.imageUrl,
+                model = image,
                 contentDescription = stringResource(R.string.beer_image_description, beer.name),
                 contentScale = ContentScale.Fit,
                 modifier = Modifier

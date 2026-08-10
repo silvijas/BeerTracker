@@ -19,9 +19,20 @@ data class TriedBeer(
     val catalogArticleNumber: String?,
     val addedBy: String?,
     val imageUrl: String?,
+    /** A local file URI for a photo the user took or picked themselves. */
+    val photoUri: String? = null,
 ) {
     init {
         require(grade == null || grade in 1..5) { "Grade must be between 1 and 5, was $grade" }
         require(grade == null || tried) { "A graded beer must be tried, grade was $grade" }
     }
+
+    /**
+     * The picture to show for this beer: the user's own photo if they
+     * attached one, otherwise the catalog product image. Two separate fields
+     * on purpose, so removing a photo falls back to the catalog picture
+     * instead of leaving the beer blank.
+     */
+    val displayImageUrl: String?
+        get() = photoUri ?: imageUrl
 }

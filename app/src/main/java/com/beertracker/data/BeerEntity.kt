@@ -25,6 +25,7 @@ data class BeerEntity(
     val catalogArticleNumber: String?,
     val addedBy: String?,
     val imageUrl: String?,
+    val photoUri: String?,
 )
 
 class Converters {
@@ -39,11 +40,11 @@ class Converters {
 fun BeerEntity.toDomain() = TriedBeer(
     id, name, brewery, type, alcoholPercent, volumeMl, price, grade, tried,
     note, aftertaste, goesWellWith, buyAgain, favourite, dateAdded,
-    catalogArticleNumber, addedBy, imageUrl,
+    catalogArticleNumber, addedBy, imageUrl, photoUri,
 )
 
 fun TriedBeer.toEntity() = BeerEntity(
     id, name, brewery, type, alcoholPercent, volumeMl, price, grade, tried,
     note, aftertaste, goesWellWith, buyAgain, favourite, dateAdded,
-    catalogArticleNumber, addedBy, imageUrl,
+    catalogArticleNumber, addedBy, imageUrl, photoUri,
 )

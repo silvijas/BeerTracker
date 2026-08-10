@@ -58,4 +58,21 @@ class TriedBeerTest {
         assertThrows(IllegalArgumentException::class.java) { beer(grade = 0, tried = true) }
         assertThrows(IllegalArgumentException::class.java) { beer(grade = 6, tried = true) }
     }
+
+    @Test
+    fun `displayImageUrl prefers the user's photo over the catalog image`() {
+        val b = beer(imageUrl = "https://cdn/x.jpg").copy(photoUri = "file:///p.jpg")
+        assertEquals("file:///p.jpg", b.displayImageUrl)
+    }
+
+    @Test
+    fun `displayImageUrl falls back to the catalog image`() {
+        val b = beer(imageUrl = "https://cdn/x.jpg").copy(photoUri = null)
+        assertEquals("https://cdn/x.jpg", b.displayImageUrl)
+    }
+
+    @Test
+    fun `displayImageUrl is null when the beer has neither`() {
+        assertNull(beer(imageUrl = null).copy(photoUri = null).displayImageUrl)
+    }
 }
