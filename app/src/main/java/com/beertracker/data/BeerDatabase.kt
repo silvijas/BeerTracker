@@ -8,7 +8,7 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [BeerEntity::class], version = 2, exportSchema = true)
+@Database(entities = [BeerEntity::class], version = 3, exportSchema = true)
 @TypeConverters(Converters::class)
 abstract class BeerDatabase : RoomDatabase() {
     abstract fun beerDao(): BeerDao
@@ -26,9 +26,20 @@ abstract class BeerDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * v2 to v3 moves grading from the old 5-10 scale to 1-5. No release
+         * has real graded data yet, so every existing grade is cleared
+         * instead of remapped; every other column is untouched.
+         */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("UPDATE tried_beers SET grade = NULL WHERE grade IS NOT NULL")
+            }
+        }
+
         fun build(context: Context): BeerDatabase =
             Room.databaseBuilder(context, BeerDatabase::class.java, "beertracker.db")
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
     }
 }
