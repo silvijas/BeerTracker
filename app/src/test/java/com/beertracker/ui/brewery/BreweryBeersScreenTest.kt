@@ -188,4 +188,19 @@ class BreweryBeersScreenTest {
 
         composeRule.onNodeWithText("No beers found").assertIsDisplayed()
     }
+
+    @Test
+    fun `tapping show all recovers from the filtered empty state`() {
+        render(omnipolloCatalog())
+
+        composeRule.onNodeWithText("Show All").performClick()
+        composeRule.onNodeWithText("Tried").performClick()
+
+        composeRule.onNodeWithText("You have not tried any beers from Omnipollo yet.")
+            .assertIsDisplayed()
+
+        composeRule.onNodeWithText("Show all").performClick()
+
+        composeRule.onNodeWithText("Omnipollo Bianca").assertIsDisplayed()
+    }
 }

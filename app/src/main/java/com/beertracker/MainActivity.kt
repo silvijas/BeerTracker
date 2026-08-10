@@ -122,9 +122,7 @@ fun BeerNavHost(
             )
         }
         composable("brewery/{breweryName}") { backStackEntry ->
-            val breweryName = backStackEntry.arguments?.getString("breweryName")
-                ?.let(Uri::decode)
-                ?: return@composable
+            val breweryName = backStackEntry.arguments?.getString("breweryName") ?: return@composable
             BreweryBeersScreen(
                 viewModel = viewModel(factory = BreweryBeersViewModel.factory(breweryName)),
                 breweryName = breweryName,
