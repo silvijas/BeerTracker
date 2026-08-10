@@ -8,6 +8,8 @@ import java.util.Locale
  * suggestions. Matching runs in Kotlin instead of SQL because SQLite only
  * case-folds ASCII, which would make Swedish letters match inconsistently.
  */
+enum class BrewerySort { NAME, TYPE }
+
 object CatalogBrowseLogic {
 
     fun filterAndSort(products: List<CatalogProduct>, query: String): List<CatalogProduct> {
@@ -31,5 +33,20 @@ object CatalogBrowseLogic {
         return filtered.sortedWith(
             compareBy(collator, CatalogProduct::name).thenBy(collator, CatalogProduct::brewery),
         )
+    }
+
+    fun matchesBrewery(product: CatalogProduct, breweryName: String): Boolean {
+        val target = breweryName.trim()
+        return target.isNotEmpty() && product.brewery.trim().equals(target, ignoreCase = true)
+    }
+
+    fun sortForBrewery(products: List<CatalogProduct>, sort: BrewerySort): List<CatalogProduct> {
+        val collator = Collator.getInstance(Locale("sv", "SE"))
+        return when (sort) {
+            BrewerySort.NAME -> products.sortedWith(compareBy(collator, CatalogProduct::name))
+            BrewerySort.TYPE -> products.sortedWith(
+                compareBy(collator, CatalogProduct::type).thenBy(collator, CatalogProduct::name),
+            )
+        }
     }
 }

@@ -1,7 +1,10 @@
 package com.beertracker
 
 import com.beertracker.domain.CatalogBrowseLogic
+import com.beertracker.domain.BrewerySort
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CatalogBrowseLogicTest {
@@ -68,6 +71,53 @@ class CatalogBrowseLogicTest {
         assertEquals(
             listOf("Ale Star"),
             CatalogBrowseLogic.filterAndSort(products, "  ale s ").map { it.name },
+        )
+    }
+
+    @Test
+    fun `brewery match is case insensitive and trimmed but never a substring match`() {
+        assertTrue(CatalogBrowseLogic.matchesBrewery(products[0], "zeta bryggeri"))
+        assertTrue(CatalogBrowseLogic.matchesBrewery(products[0], "  Zeta Bryggeri  "))
+        assertFalse(CatalogBrowseLogic.matchesBrewery(products[0], "Zeta"))
+    }
+
+    @Test
+    fun `a blank brewery never matches`() {
+        val blank = catalogProduct(
+            articleNumber = "500", articleNumberShort = "50",
+            name = "Mystery Can", brewery = "", type = "Lager",
+        )
+        assertFalse(CatalogBrowseLogic.matchesBrewery(blank, ""))
+        assertFalse(CatalogBrowseLogic.matchesBrewery(blank, "Zeta Bryggeri"))
+    }
+
+    @Test
+    fun `sortForBrewery orders by type then name when sorting by type`() {
+        val sameBrewery = listOf(
+            catalogProduct(articleNumber = "1", articleNumberShort = "1",
+                name = "Zeta Wheat", brewery = "Zeta Bryggeri", type = "Wheat beer"),
+            catalogProduct(articleNumber = "2", articleNumberShort = "2",
+                name = "Zeta Ale", brewery = "Zeta Bryggeri", type = "Ale"),
+            catalogProduct(articleNumber = "3", articleNumberShort = "3",
+                name = "Zeta Lager", brewery = "Zeta Bryggeri", type = "Lager"),
+        )
+        assertEquals(
+            listOf("Zeta Ale", "Zeta Lager", "Zeta Wheat"),
+            CatalogBrowseLogic.sortForBrewery(sameBrewery, BrewerySort.TYPE).map { it.name },
+        )
+    }
+
+    @Test
+    fun `sortForBrewery orders by name when sorting by name`() {
+        val sameBrewery = listOf(
+            catalogProduct(articleNumber = "1", articleNumberShort = "1",
+                name = "Zeta Wheat", brewery = "Zeta Bryggeri", type = "Wheat beer"),
+            catalogProduct(articleNumber = "2", articleNumberShort = "2",
+                name = "Zeta Ale", brewery = "Zeta Bryggeri", type = "Ale"),
+        )
+        assertEquals(
+            listOf("Zeta Ale", "Zeta Wheat"),
+            CatalogBrowseLogic.sortForBrewery(sameBrewery, BrewerySort.NAME).map { it.name },
         )
     }
 }
