@@ -8,8 +8,8 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.beertracker.BeerApp
 import com.beertracker.domain.BeerRepository
 import com.beertracker.domain.CatalogBrowseLogic
-import com.beertracker.domain.CatalogProduct
 import com.beertracker.domain.CatalogRepository
+import com.beertracker.ui.components.CatalogRow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -17,14 +17,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
 enum class CatalogBrowserEmptyState { EMPTY_CATALOG, NO_RESULTS }
-
-/** One browser row: a catalog product, plus the user's beer when logged. */
-data class CatalogRow(
-    val product: CatalogProduct,
-    val triedBeerId: String?,
-    val grade: Int?,
-    val tried: Boolean,
-)
 
 sealed interface CatalogBrowserUiState {
     data object Loading : CatalogBrowserUiState
