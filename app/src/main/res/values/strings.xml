@@ -148,4 +148,12 @@
     <string name="catalog_empty_title">Catalog is empty</string>
     <string name="catalog_empty_message">Use the update button on the overview to download the beer catalog.</string>
     <string name="catalog_no_results_message">Try a different name, brewery, type, or article number.</string>
+    <string name="sort_type">Type</string>
+    <string name="show_by">Show %1$s</string>
+    <string name="filter_all">All</string>
+    <string name="brewery_no_catalog_beers_title">No beers found</string>
+    <string name="brewery_no_catalog_beers_message">No catalog beers found for %1$s.</string>
+    <string name="brewery_no_tried_message">You have not tried any beers from %1$s yet.</string>
+    <string name="brewery_no_untried_message">You have tried every beer from %1$s in the catalog.</string>
+    <string name="show_all_action">Show all</string>
 </resources>
