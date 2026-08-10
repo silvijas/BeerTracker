@@ -113,7 +113,11 @@ An image block at the top of the form, above the Basics section:
 - Shows the beer's current image (the user's photo if there is one, else the
   catalog image), 160dp tall, same clip and background treatment as the
   detail screen's.
-- With no image at all, shows the same muted beer can placeholder.
+- With no image at all it shows nothing, not a placeholder. A 160dp empty box
+  here would push the name field, and the catalog suggestion list under it,
+  below the fold on the add form, which is exactly where the user starts.
+  (Changed during implementation; the list row placeholder stays, because
+  there the point is keeping every row's left edge aligned.)
 - Two buttons under it: "Take photo" and "Choose photo". Once the beer has a
   photo of the user's own, a third appears: "Remove photo".
 - Removing a photo falls back to the catalog image if the beer has one,
@@ -255,13 +259,16 @@ refreshes and app updates.
 File lifecycle, all owned by one small `BeerPhotoStore` class in `data` so
 no screen deals with files directly:
 
-- Replacing a photo writes the new file first, then deletes the old one.
-- "Remove photo" clears `photoUri` and deletes the file.
 - Deleting a beer deletes its photo file, in `RoomBeerRepository.deleteBeer`.
-- A photo taken or picked on an add form that is then abandoned without
-  saving leaves an orphan file. `BeerPhotoStore` gets a `deleteOrphans`
-  sweep run on app start from `BeerApp`, removing files in `beer-photos`
-  that no row references.
+  This is the only eager delete, because the row is definitively gone by then.
+- Everything else is reclaimed by `BeerPhotoStore.deleteOrphans`, run at app
+  start from `BeerApp`, which removes files in `beer-photos` that no saved
+  row references. That covers replaced photos, removed photos, and a photo
+  taken on an add form that was then abandoned.
+- Replacing or removing a photo on the form therefore does NOT delete the old
+  file at that moment. (Changed during implementation: the spec originally
+  called for an eager delete, but the user can still discard the edit, and
+  the saved row would then point at a file already deleted.)
 
 ### UI
 
