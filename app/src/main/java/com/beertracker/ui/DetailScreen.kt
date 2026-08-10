@@ -44,6 +44,7 @@ import com.beertracker.ui.components.ErrorState
 import com.beertracker.ui.components.FlagToggleRow
 import com.beertracker.ui.components.GradeMark
 import com.beertracker.ui.components.LoadingState
+import com.beertracker.ui.components.PairingRow
 import com.beertracker.ui.components.SectionHeader
 import com.beertracker.ui.theme.BeerTrackerSpacing
 import com.beertracker.ui.theme.BeerTrackerTheme
@@ -278,8 +279,8 @@ private fun DetailContent(
             stringResource(R.string.pairings_section),
             modifier = Modifier.padding(top = BeerTrackerSpacing.large),
         )
-        DetailText(
-            value = beer.goesWellWith.joinToString(", "),
+        PairingRow(
+            pairings = beer.goesWellWith,
             emptyText = stringResource(R.string.no_pairings),
         )
     }
