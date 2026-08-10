@@ -42,7 +42,7 @@ class BeerDaoTest {
     fun `round trip preserves all fields`() = runTest {
         val original = beer(
             id = "a", name = "Punk IPA", brewery = "BrewDog", type = "IPA",
-            alcoholPercent = 5.6, volumeMl = 330, price = 29.5, grade = 9, tried = true,
+            alcoholPercent = 5.6, volumeMl = 330, price = 29.5, grade = 4, tried = true,
             note = "hoppy", aftertaste = "citrus bitter",
             goesWellWith = listOf("Red meat", "Dessert"),
             buyAgain = true, favourite = true, dateAdded = 12345L)
@@ -73,9 +73,9 @@ class BeerDaoTest {
 
     @Test
     fun `update replaces and delete removes`() = runTest {
-        repo.addBeer(beer(id = "a", grade = 6))
-        repo.updateBeer(beer(id = "a", grade = 10))
-        assertEquals(10, repo.getBeer("a")?.grade)
+        repo.addBeer(beer(id = "a", grade = 3))
+        repo.updateBeer(beer(id = "a", grade = 5))
+        assertEquals(5, repo.getBeer("a")?.grade)
         repo.updateBeer(beer(id = "a", grade = null, tried = false))
         assertNull(repo.getBeer("a")?.grade)
         repo.deleteBeer("a")

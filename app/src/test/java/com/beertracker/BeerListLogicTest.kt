@@ -10,13 +10,13 @@ class BeerListLogicTest {
 
     private val beers = listOf(
         beer(id = "a", name = "Falcon Export", brewery = "Falcon", type = "Lager",
-            grade = 6, price = 15.0, dateAdded = 100L, buyAgain = true),
+            grade = 1, price = 15.0, dateAdded = 100L, buyAgain = true),
         beer(id = "b", name = "Punk IPA", brewery = "BrewDog", type = "IPA",
-            grade = 9, price = 30.0, dateAdded = 300L, favourite = true),
+            grade = 5, price = 30.0, dateAdded = 300L, favourite = true),
         beer(id = "c", name = "Guinness Draught", brewery = "Guinness", type = "Stout",
-            grade = 8, price = null, dateAdded = 200L),
+            grade = 3, price = null, dateAdded = 200L),
         beer(id = "d", name = "Mariestads Export", brewery = "Spendrups", type = "Lager",
-            grade = 8, price = 18.0, dateAdded = 400L, buyAgain = true, favourite = true),
+            grade = 3, price = 18.0, dateAdded = 400L, buyAgain = true, favourite = true),
     )
 
     // The four graded beers above, plus one untried beer and one tried beer with no grade.

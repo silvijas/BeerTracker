@@ -85,8 +85,8 @@ class OverviewViewModelTest {
     @Test
     fun `default sort is grade descending`() = runTest {
         val repo = FakeBeerRepository()
-        repo.addBeer(beer(id = "low", grade = 6))
-        repo.addBeer(beer(id = "high", grade = 10))
+        repo.addBeer(beer(id = "low", grade = 2))
+        repo.addBeer(beer(id = "high", grade = 5))
         val vm = OverviewViewModel(repo)
         collecting(vm)
         assertEquals(listOf("high", "low"), vm.uiState.value.beers.map { it.id })
@@ -96,7 +96,7 @@ class OverviewViewModelTest {
     fun `default sort puts ungraded beers last`() = runTest {
         val repo = FakeBeerRepository()
         repo.addBeer(beer(id = "untried", grade = null, tried = false, dateAdded = 9L))
-        repo.addBeer(beer(id = "graded", grade = 6, dateAdded = 1L))
+        repo.addBeer(beer(id = "graded", grade = 3, dateAdded = 1L))
         val vm = OverviewViewModel(repo)
         collecting(vm)
         assertEquals(listOf("graded", "untried"), vm.uiState.value.beers.map { it.id })
@@ -129,7 +129,7 @@ class OverviewViewModelTest {
     @Test
     fun `not tried toggle filters and toggles off again`() = runTest {
         val repo = FakeBeerRepository()
-        repo.addBeer(beer(id = "graded", grade = 8))
+        repo.addBeer(beer(id = "graded", grade = 4))
         repo.addBeer(beer(id = "untried", grade = null, tried = false))
         val vm = OverviewViewModel(repo)
         collecting(vm)
@@ -154,8 +154,8 @@ class OverviewViewModelTest {
     @Test
     fun `sort can be changed`() = runTest {
         val repo = FakeBeerRepository()
-        repo.addBeer(beer(id = "old", grade = 10, dateAdded = 1L))
-        repo.addBeer(beer(id = "new", grade = 5, dateAdded = 2L))
+        repo.addBeer(beer(id = "old", grade = 5, dateAdded = 1L))
+        repo.addBeer(beer(id = "new", grade = 2, dateAdded = 2L))
         val vm = OverviewViewModel(repo)
         collecting(vm)
         vm.setSort(BeerSort.DATE_ADDED)

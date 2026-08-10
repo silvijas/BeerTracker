@@ -53,14 +53,14 @@ class ComposeUiSmokeTest {
         composeRule.setContent {
             BeerTrackerTheme {
                 Column {
-                    GradeMark(grade = 8, tried = true)
+                    GradeMark(grade = 4, tried = true)
                     GradeMark(grade = null, tried = false)
                 }
             }
         }
 
-        composeRule.onNodeWithContentDescription("Grade 8 out of 10")
-            .assertContentDescriptionEquals("Grade 8 out of 10")
+        composeRule.onNodeWithContentDescription("Grade 4 out of 5")
+            .assertContentDescriptionEquals("Grade 4 out of 5")
             .assertIsDisplayed()
         composeRule.onNodeWithText("Not tried").assertIsDisplayed()
     }

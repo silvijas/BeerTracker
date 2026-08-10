@@ -19,9 +19,9 @@ class FakeBeerRepositoryTest {
     @Test
     fun `update replaces the beer with the same id`() = runTest {
         val repo = FakeBeerRepository()
-        repo.addBeer(beer(id = "a", grade = 6))
-        repo.updateBeer(beer(id = "a", grade = 9))
-        assertEquals(9, repo.getBeer("a")?.grade)
+        repo.addBeer(beer(id = "a", grade = 3))
+        repo.updateBeer(beer(id = "a", grade = 5))
+        assertEquals(5, repo.getBeer("a")?.grade)
         assertEquals(1, repo.observeBeers().first().size)
     }
 

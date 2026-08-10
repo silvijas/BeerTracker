@@ -129,11 +129,11 @@ class CatalogBrowserScreenTest {
     fun `a logged beer shows its grade and opens its detail instead`() {
         val beers = FakeBeerRepository()
         runBlocking {
-            beers.addBeer(beer(id = "b1", grade = 9).copy(catalogArticleNumber = "1324515"))
+            beers.addBeer(beer(id = "b1", grade = 4).copy(catalogArticleNumber = "1324515"))
         }
         val clicks = render(twoBeerCatalog(), beers)
 
-        composeRule.onNodeWithContentDescription("Grade 9 out of 10").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Grade 4 out of 5").assertIsDisplayed()
         composeRule.onNodeWithText("Omnipollo Prodigal Pale Ale").performClick()
 
         assertEquals("b1", clicks.opened)

@@ -47,14 +47,14 @@ class AddEditBeerViewModelTest {
                 alcoholPercent = "5,6", volumeMl = "330", price = "29,50",
             )
         }
-        vm.setGrade(9)
+        vm.setGrade(5)
         vm.save()
         val saved = repo.observeBeers().first().single()
         assertEquals("Punk IPA", saved.name)
         assertEquals(5.6, saved.alcoholPercent!!, 0.001)
         assertEquals(330, saved.volumeMl)
         assertEquals(29.5, saved.price!!, 0.001)
-        assertEquals(9, saved.grade)
+        assertEquals(5, saved.grade)
         assertTrue(saved.tried)
         assertEquals(777L, saved.dateAdded)
         assertTrue(vm.form.value.saved)
@@ -89,11 +89,11 @@ class AddEditBeerViewModelTest {
         val repo = FakeBeerRepository()
         val vm = AddEditBeerViewModel(repo)
         vm.update { it.copy(name = "Punk IPA") }
-        vm.setGrade(8)
+        vm.setGrade(4)
         assertTrue(vm.form.value.tried)
         vm.save()
         val saved = repo.observeBeers().first().single()
-        assertEquals(8, saved.grade)
+        assertEquals(4, saved.grade)
         assertTrue(saved.tried)
     }
 
@@ -114,7 +114,7 @@ class AddEditBeerViewModelTest {
         val repo = FakeBeerRepository()
         val vm = AddEditBeerViewModel(repo)
         vm.update { it.copy(name = "Changed My Mind") }
-        vm.setGrade(9)
+        vm.setGrade(5)
         vm.setTried(false)
         assertNull(vm.form.value.grade)
         assertFalse(vm.form.value.tried)
@@ -129,7 +129,7 @@ class AddEditBeerViewModelTest {
         val repo = FakeBeerRepository()
         val vm = AddEditBeerViewModel(repo)
         vm.update { it.copy(name = "No Score Yet") }
-        vm.setGrade(7)
+        vm.setGrade(3)
         vm.setGrade(null)
         assertNull(vm.form.value.grade)
         assertTrue(vm.form.value.tried)
@@ -139,7 +139,7 @@ class AddEditBeerViewModelTest {
     fun `an out of range grade sets gradeError and stores nothing`() = runTest {
         val repo = FakeBeerRepository()
         val vm = AddEditBeerViewModel(repo)
-        vm.update { it.copy(name = "Bad Grade", grade = 4, tried = true) }
+        vm.update { it.copy(name = "Bad Grade", grade = 0, tried = true) }
         vm.save()
         assertTrue(vm.form.value.gradeError)
         assertFalse(vm.form.value.saved)
@@ -175,16 +175,16 @@ class AddEditBeerViewModelTest {
     @Test
     fun `editing preserves id and dateAdded`() = runTest {
         val repo = FakeBeerRepository()
-        repo.addBeer(beer(id = "a", name = "Old Name", grade = 6, dateAdded = 111L))
+        repo.addBeer(beer(id = "a", name = "Old Name", grade = 3, dateAdded = 111L))
         val vm = AddEditBeerViewModel(repo, clock = { 999L })
         vm.load("a")
         vm.update { it.copy(name = "New Name") }
-        vm.setGrade(8)
+        vm.setGrade(5)
         vm.save()
         val saved = repo.observeBeers().first().single()
         assertEquals("a", saved.id)
         assertEquals("New Name", saved.name)
-        assertEquals(8, saved.grade)
+        assertEquals(5, saved.grade)
         assertEquals(111L, saved.dateAdded)
     }
 
@@ -452,7 +452,7 @@ class AddEditBeerViewModelTest {
         val vm = AddEditBeerViewModel(repo, catalog)
 
         vm.prefillFromCatalog("1324515")
-        vm.setGrade(8)
+        vm.setGrade(5)
         vm.save()
 
         val saved = repo.observeBeers().first().single()
@@ -462,7 +462,7 @@ class AddEditBeerViewModelTest {
             "https://product-cdn.systembolaget.se/productimages/50786609/50786609_400.jpg",
             saved.imageUrl,
         )
-        assertEquals(8, saved.grade)
+        assertEquals(5, saved.grade)
         assertTrue(saved.tried)
     }
 
@@ -504,7 +504,7 @@ class AddEditBeerViewModelTest {
     @Test
     fun `prefill from catalog is ignored while an edit session is loaded`() = runTest {
         val repo = FakeBeerRepository()
-        repo.addBeer(beer(id = "a", name = "Loaded Beer", grade = 6))
+        repo.addBeer(beer(id = "a", name = "Loaded Beer", grade = 3))
         val catalog = FakeCatalogRepository().apply { add(catalogProduct()) }
         val vm = AddEditBeerViewModel(repo, catalog)
 
@@ -512,7 +512,7 @@ class AddEditBeerViewModelTest {
         vm.prefillFromCatalog("1324515")
 
         assertEquals("Loaded Beer", vm.form.value.name)
-        assertEquals(6, vm.form.value.grade)
+        assertEquals(3, vm.form.value.grade)
         assertTrue(vm.form.value.tried)
 
         vm.save()
@@ -525,7 +525,7 @@ class AddEditBeerViewModelTest {
     @Test
     fun `load wins when it starts right after a prefill lookup`() = runTest {
         val repo = FakeBeerRepository()
-        repo.addBeer(beer(id = "a", name = "Loaded Beer", grade = 6))
+        repo.addBeer(beer(id = "a", name = "Loaded Beer", grade = 3))
         val catalog = FakeCatalogRepository().apply { add(catalogProduct()) }
         val vm = AddEditBeerViewModel(repo, catalog)
 
