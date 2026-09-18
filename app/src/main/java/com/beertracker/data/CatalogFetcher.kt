@@ -151,10 +151,11 @@ internal fun mapProduct(product: JSONObject): CatalogProduct {
         // Half-to-even, matching Python's round(): int(round(330.5)) == 330.
         volumeMl = product.optDoubleOrNull("volume")?.let { Math.rint(it).toInt() },
         price = product.optDoubleOrNull("price"),
-        // Field-specific, not optStringOrNull: the seed script's country field
-        // is a plain passthrough (no "or" fallback), so a present empty string
-        // must stay "" instead of collapsing to null like the other fields do.
-        country = if (product.isNull("country")) null else product.getString("country"),
+        // Empty means unknown, so it becomes null like every other text
+        // field. The seed script (fetch_catalog.py) and the seed parser
+        // (CatalogJson.kt) do the same, so a refresh never flips a product's
+        // country between null and an empty string.
+        country = product.optStringOrNull("country"),
         imageUrl = imageUrl,
         pairings = mapPairings(product),
     )

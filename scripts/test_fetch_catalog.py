@@ -81,6 +81,13 @@ class MapProductTest(unittest.TestCase):
         self.assertIsNone(mapped["imageUrl"])
         self.assertEqual(mapped["pairings"], [])
 
+    def test_empty_country_becomes_none(self):
+        # An empty string means "unknown", the same as a missing key, and the
+        # app's CatalogJson parser already reads it as null. Writing None keeps
+        # the seed file and the in-app fetcher in step.
+        product = dict(SAMPLE_BEER, country="")
+        self.assertIsNone(fetch_catalog.map_product(product)["country"])
+
     def test_type_falls_back_to_category_level_3(self):
         product = dict(SAMPLE_BEER, categoryLevel2=None)
         self.assertEqual(fetch_catalog.map_product(product)["type"], "Pale Ale")

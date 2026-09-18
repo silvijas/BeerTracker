@@ -66,6 +66,15 @@ class CatalogJsonTest {
     }
 
     @Test
+    fun `an empty country string in the seed becomes null`() {
+        // Pins the seed side of the contract the fetcher test above relies on.
+        val seed = parseCatalogAsset(
+            """{"snapshotVersion": "v", "beers": [{"articleNumber": "42", "name": "X", "brewery": "", "type": "Ale", "country": ""}]}""",
+        )
+        assertNull(seed.beers.single().country)
+    }
+
+    @Test
     fun `missing optional keys also become kotlin nulls`() {
         val seed = parseCatalogAsset(
             """{"snapshotVersion": "v", "beers": [{"articleNumber": "42", "name": "X", "brewery": "", "type": "Ale"}]}""",

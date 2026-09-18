@@ -115,7 +115,10 @@ def map_product(product):
         "alcoholPercent": product.get("alcoholPercentage"),
         "volumeMl": int(round(volume)) if volume is not None else None,
         "price": product.get("price"),
-        "country": product.get("country"),
+        # "or None" turns an empty string into None: an empty country means
+        # unknown, exactly as the app's CatalogJson parser and CatalogFetcher
+        # read it, so all three paths agree on null.
+        "country": product.get("country") or None,
         "imageUrl": image_url,
         "pairings": map_pairings(product),
     }

@@ -103,9 +103,12 @@ class SystembolagetCatalogFetcherTest {
     }
 
     @Test
-    fun `mapProduct keeps a present but empty country exactly like the seed script`() {
+    fun `mapProduct turns an empty country into null like every other text field`() {
+        // The seed script and the seed parser both treat an empty country as
+        // unknown, so the live fetcher must too, or a catalog refresh would
+        // change the same product's country from null to an empty string.
         val json = JSONObject(sampleBeer).put("country", "")
-        assertEquals("", mapProduct(json).country)
+        assertNull(mapProduct(json).country)
     }
 
     @Test
