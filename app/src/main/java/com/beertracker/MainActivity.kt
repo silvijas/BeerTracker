@@ -26,6 +26,8 @@ import com.beertracker.ui.brewery.BreweryBeersScreen
 import com.beertracker.ui.brewery.BreweryBeersViewModel
 import com.beertracker.ui.catalog.CatalogBrowserScreen
 import com.beertracker.ui.catalog.CatalogBrowserViewModel
+import com.beertracker.ui.scan.CanScanScreen
+import com.beertracker.ui.scan.CanScanViewModel
 import com.beertracker.ui.scan.ScanScreen
 import com.beertracker.ui.scan.ScanViewModel
 import com.beertracker.ui.theme.BeerTrackerTheme
@@ -103,6 +105,38 @@ fun BeerNavHost(
                 onFound = { articleNumber ->
                     navController.navigate("edit?prefillArticle=$articleNumber") {
                         popUpTo("scan") { inclusive = true }
+                    }
+                },
+                onSwitchToCan = {
+                    navController.navigate("can") {
+                        popUpTo("scan") { inclusive = true }
+                    }
+                },
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable("can") {
+            CanScanScreen(
+                viewModel = viewModel(factory = CanScanViewModel.Factory),
+                onAddProduct = { articleNumber ->
+                    navController.navigate("edit?prefillArticle=$articleNumber") {
+                        popUpTo("can") { inclusive = true }
+                    }
+                },
+                onOpenBeer = { id -> navController.navigate("detail/$id") },
+                onAddManually = { guessedName ->
+                    val route = if (guessedName.isNullOrBlank()) {
+                        "edit"
+                    } else {
+                        "edit?prefillName=${Uri.encode(guessedName)}"
+                    }
+                    navController.navigate(route) {
+                        popUpTo("can") { inclusive = true }
+                    }
+                },
+                onSwitchToShelfLabel = {
+                    navController.navigate("scan") {
+                        popUpTo("can") { inclusive = true }
                     }
                 },
                 onBack = { navController.popBackStack() },

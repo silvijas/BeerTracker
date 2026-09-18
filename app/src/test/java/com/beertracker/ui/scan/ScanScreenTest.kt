@@ -37,6 +37,7 @@ class ScanScreenTest {
         permission: CameraPermission = CameraPermission.DENIED,
         onManualLookup: () -> Unit = {},
         onScanAgain: () -> Unit = {},
+        onSwitchToCan: () -> Unit = {},
     ) {
         composeRule.setContent {
             BeerTrackerTheme {
@@ -47,6 +48,7 @@ class ScanScreenTest {
                     onManualInputChange = {},
                     onManualLookup = onManualLookup,
                     onScanAgain = onScanAgain,
+                    onSwitchToCan = onSwitchToCan,
                     onBack = {},
                     cameraPreview = { Text("Fake camera preview") },
                 )
@@ -61,7 +63,7 @@ class ScanScreenTest {
 
         composeRule.onNodeWithText("Camera unavailable").assertIsDisplayed()
         composeRule.onNodeWithText("Article number").assertIsDisplayed()
-        composeRule.onNodeWithText("Look up").performClick()
+        composeRule.onNodeWithText("Look up").performScrollTo().performClick()
         assertTrue(lookedUp)
     }
 
@@ -100,6 +102,7 @@ class ScanScreenTest {
                 ScanScreen(
                     viewModel = viewModel,
                     onFound = { foundNumber = it },
+                    onSwitchToCan = {},
                     onBack = {},
                 )
             }
@@ -110,5 +113,15 @@ class ScanScreenTest {
         composeRule.runOnIdle {
             assertEquals("1324515", foundNumber)
         }
+    }
+
+    @Test
+    fun `the mode switch reports can`() {
+        var switched = false
+        renderContent(onSwitchToCan = { switched = true })
+
+        composeRule.onNodeWithText("Can").performClick()
+
+        assertTrue(switched)
     }
 }

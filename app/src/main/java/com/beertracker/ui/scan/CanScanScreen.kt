@@ -6,63 +6,62 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.beertracker.R
+import com.beertracker.ui.components.CatalogListItem
+import com.beertracker.ui.components.CatalogRow
 import com.beertracker.ui.components.ErrorState
 import com.beertracker.ui.components.SectionHeader
+import com.beertracker.ui.components.beerListSubtitle
 import com.beertracker.ui.theme.BeerTrackerSpacing
 
+/**
+ * The can scan mode: live camera, on-device text recognition, and a list
+ * of catalog beers whose name and brewery match what was read. Picking an
+ * unlogged beer goes to the prefilled add form; a logged one opens its
+ * detail screen; "Add manually" carries the best name guess into an empty
+ * form.
+ */
 @Composable
-fun ScanScreen(
-    viewModel: ScanViewModel,
-    onFound: (String) -> Unit,
-    onSwitchToCan: () -> Unit,
+fun CanScanScreen(
+    viewModel: CanScanViewModel,
+    onAddProduct: (String) -> Unit,
+    onOpenBeer: (String) -> Unit,
+    onAddManually: (String?) -> Unit,
+    onSwitchToShelfLabel: () -> Unit,
     onBack: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val permission = rememberCameraPermission()
-    LaunchedEffect(state) {
-        val found = state as? ScanUiState.Found ?: return@LaunchedEffect
-        onFound(found.product.articleNumber)
-    }
-    var manualInput by rememberSaveable { mutableStateOf("") }
 
-    ScanContent(
+    CanScanContent(
         state = state,
         permission = permission,
-        manualInput = manualInput,
-        onManualInputChange = { manualInput = it },
-        onManualLookup = { viewModel.onManualLookup(manualInput) },
-        onScanAgain = viewModel::scanAgain,
-        onSwitchToCan = onSwitchToCan,
+        onPickRow = { row ->
+            val beerId = row.triedBeerId
+            if (beerId != null) onOpenBeer(beerId) else onAddProduct(row.product.articleNumber)
+        },
+        onStartOver = viewModel::startOver,
+        onAddManually = { onAddManually(state.guessedName) },
+        onSwitchToShelfLabel = onSwitchToShelfLabel,
         onBack = onBack,
         cameraPreview = {
             TextRecognitionCameraPreview(onTextDetected = viewModel::onTextDetected)
@@ -72,14 +71,13 @@ fun ScanScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ScanContent(
-    state: ScanUiState,
+internal fun CanScanContent(
+    state: CanScanUiState,
     permission: CameraPermission,
-    manualInput: String,
-    onManualInputChange: (String) -> Unit,
-    onManualLookup: () -> Unit,
-    onScanAgain: () -> Unit,
-    onSwitchToCan: () -> Unit,
+    onPickRow: (CatalogRow) -> Unit,
+    onStartOver: () -> Unit,
+    onAddManually: () -> Unit,
+    onSwitchToShelfLabel: () -> Unit,
     onBack: () -> Unit,
     cameraPreview: @Composable () -> Unit,
 ) {
@@ -111,22 +109,23 @@ internal fun ScanContent(
             verticalArrangement = Arrangement.spacedBy(BeerTrackerSpacing.medium),
         ) {
             ScanModeSwitch(
-                selected = ScanMode.SHELF_LABEL,
-                onSelect = { if (it == ScanMode.CAN) onSwitchToCan() },
+                selected = ScanMode.CAN,
+                onSelect = { if (it == ScanMode.SHELF_LABEL) onSwitchToShelfLabel() },
             )
             when (permission) {
                 CameraPermission.GRANTED -> {
                     cameraPreview()
                     Text(
-                        stringResource(R.string.scan_hint),
+                        stringResource(R.string.can_hint),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    MatchesSection(state = state, onPickRow = onPickRow)
                 }
                 CameraPermission.DENIED -> {
                     ErrorState(
                         title = stringResource(R.string.camera_denied_title),
-                        message = stringResource(R.string.camera_denied_message),
+                        message = stringResource(R.string.can_camera_denied_message),
                     )
                 }
                 CameraPermission.UNKNOWN -> {
@@ -138,57 +137,57 @@ internal fun ScanContent(
                     )
                 }
             }
-
-            SectionHeader(
-                title = stringResource(R.string.manual_lookup_section),
-                supportingText = stringResource(R.string.manual_lookup_help),
-                modifier = Modifier.padding(top = BeerTrackerSpacing.small),
-            )
-            OutlinedTextField(
-                value = manualInput,
-                onValueChange = onManualInputChange,
-                label = { Text(stringResource(R.string.article_number_label)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Button(
-                onClick = onManualLookup,
-                enabled = manualInput.isNotBlank() && state != ScanUiState.Searching,
-                modifier = Modifier.fillMaxWidth(),
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = BeerTrackerSpacing.section),
+                horizontalArrangement = Arrangement.spacedBy(BeerTrackerSpacing.medium),
             ) {
-                Text(stringResource(R.string.look_up))
-            }
-
-            when (state) {
-                ScanUiState.Searching -> {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(BeerTrackerSpacing.small),
-                        verticalAlignment = Alignment.CenterVertically,
+                if (permission == CameraPermission.GRANTED) {
+                    OutlinedButton(
+                        onClick = onStartOver,
+                        enabled = state.hasText,
+                        modifier = Modifier.weight(1f),
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
-                        )
-                        Text(stringResource(R.string.searching_catalog))
+                        Text(stringResource(R.string.can_start_over))
                     }
                 }
-                is ScanUiState.NotFound -> {
-                    ErrorState(
-                        title = stringResource(R.string.scan_not_found_title),
-                        message = stringResource(R.string.scan_not_found_message, state.number),
-                        actionLabel = stringResource(R.string.scan_again),
-                        onAction = onScanAgain,
-                    )
+                Button(
+                    onClick = onAddManually,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(stringResource(R.string.can_add_manually))
                 }
-                is ScanUiState.Found -> {
-                    Text(
-                        stringResource(R.string.scan_found, state.product.name),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                }
-                ScanUiState.Idle -> Unit
             }
         }
+    }
+}
+
+/**
+ * The candidate list. A plain Column rather than a LazyColumn because the
+ * screen already scrolls and there are at most five rows.
+ */
+@Composable
+private fun MatchesSection(
+    state: CanScanUiState,
+    onPickRow: (CatalogRow) -> Unit,
+) {
+    val supporting = when {
+        state.matches.isNotEmpty() -> null
+        state.hasText -> stringResource(R.string.can_no_match)
+        else -> stringResource(R.string.can_nothing_read)
+    }
+    SectionHeader(
+        title = stringResource(R.string.can_matches_section),
+        supportingText = supporting,
+        modifier = Modifier.padding(top = BeerTrackerSpacing.small),
+    )
+    state.matches.forEach { row ->
+        CatalogListItem(
+            row = row,
+            subtitle = beerListSubtitle(row.product.brewery, row.product.type),
+            onClick = { onPickRow(row) },
+            modifier = Modifier.padding(vertical = BeerTrackerSpacing.xSmall),
+        )
     }
 }

@@ -120,7 +120,7 @@
     <string name="detail_error_title">Could not open this beer</string>
     <string name="detail_error_message">Return to the cellar and try again.</string>
     <string name="scan_action">Scan</string>
-    <string name="scan_title">Scan shelf label</string>
+    <string name="scan_title">Scan</string>
     <string name="scan_mode_shelf_label">Shelf label</string>
     <string name="scan_mode_can">Can</string>
     <string name="scan_hint">Point the camera at the shelf label. The article number is picked up automatically.</string>
@@ -136,6 +136,13 @@
     <string name="scan_not_found_message">Number %1$s is not in the beer catalog. Check the digits or add the beer manually.</string>
     <string name="scan_again">Scan again</string>
     <string name="scan_found">Found %1$s</string>
+    <string name="can_hint">Point the camera at the can\'s label and turn the can slowly. Beers whose name and brewery match the text appear below.</string>
+    <string name="can_camera_denied_message">Reading a can needs the camera. Allow camera access in system settings, or add the beer manually.</string>
+    <string name="can_matches_section">Matches</string>
+    <string name="can_nothing_read">Nothing read yet.</string>
+    <string name="can_no_match">No catalog beer matches the text read so far. Turn the can, or add the beer manually.</string>
+    <string name="can_start_over">Start over</string>
+    <string name="can_add_manually">Add manually</string>
     <string name="update_catalog">Update beer catalog</string>
     <string name="update_now">Update now</string>
     <string name="catalog_status_unknown">The catalog is still being prepared.</string>
