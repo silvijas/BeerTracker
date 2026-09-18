@@ -10,6 +10,7 @@ import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
+import androidx.camera.core.UseCase
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -93,8 +94,14 @@ internal fun TextRecognitionCameraPreview(onTextDetected: (String) -> Unit) {
         val mainExecutor = ContextCompat.getMainExecutor(context)
         val providerFuture = ProcessCameraProvider.getInstance(context)
         var provider: ProcessCameraProvider? = null
+        var boundUseCases: List<UseCase> = emptyList()
+        var disposed = false
         val analyzer = TextRecognitionAnalyzer(onTextDetected)
         providerFuture.addListener({
+            // A fast switch between the two scan modes can dispose this screen
+            // before the provider answers. Binding then would hand the camera
+            // to a screen that no longer exists.
+            if (disposed) return@addListener
             val cameraProvider = providerFuture.get()
             provider = cameraProvider
             val preview = Preview.Builder().build().also {
@@ -104,6 +111,7 @@ internal fun TextRecognitionCameraPreview(onTextDetected: (String) -> Unit) {
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
                 .also { it.setAnalyzer(mainExecutor, analyzer) }
+            boundUseCases = listOf(preview, analysis)
             cameraProvider.unbindAll()
             cameraProvider.bindToLifecycle(
                 lifecycleOwner,
@@ -113,8 +121,14 @@ internal fun TextRecognitionCameraPreview(onTextDetected: (String) -> Unit) {
             )
         }, mainExecutor)
         onDispose {
+            disposed = true
             analyzer.close()
-            provider?.unbindAll()
+            // Release only this screen's own use cases. The provider is one
+            // per process, and while the two scan modes crossfade the incoming
+            // screen has already bound its camera; unbindAll() here tore that
+            // binding down and left the new preview black or frozen on its
+            // first frame.
+            provider?.unbind(*boundUseCases.toTypedArray())
         }
     }
 }
