@@ -3181,7 +3181,7 @@ with the code it shows.
 From the checkout root in PowerShell:
 
 ```powershell
-Select-String -Path docs/firebase-setup.md, README.md, docs/superpowers/specs/2026-07-28-beertracker-v1-design.md -Pattern "[–—]"
+Select-String -Path docs/firebase-setup.md, README.md, docs/superpowers/specs/2026-07-28-beertracker-v1-design.md -Pattern "[\u2013\u2014]"
 ```
 
 Expected: no output.
