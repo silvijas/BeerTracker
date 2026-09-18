@@ -121,6 +121,8 @@
     <string name="detail_error_message">Return to the cellar and try again.</string>
     <string name="scan_action">Scan</string>
     <string name="scan_title">Scan shelf label</string>
+    <string name="scan_mode_shelf_label">Shelf label</string>
+    <string name="scan_mode_can">Can</string>
     <string name="scan_hint">Point the camera at the shelf label. The article number is picked up automatically.</string>
     <string name="camera_waiting">Waiting for camera permission.</string>
     <string name="camera_denied_title">Camera unavailable</string>

@@ -1,23 +1,10 @@
 package com.beertracker.ui.scan
 
-import android.Manifest
-import android.content.Context
-import android.content.pm.PackageManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ExperimentalGetImage
-import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.ImageProxy
-import androidx.camera.core.Preview
-import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -37,33 +24,21 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.beertracker.R
 import com.beertracker.ui.components.ErrorState
 import com.beertracker.ui.components.SectionHeader
 import com.beertracker.ui.theme.BeerTrackerSpacing
-import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.TextRecognition
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions
-
-internal enum class CameraPermission { UNKNOWN, GRANTED, DENIED }
 
 @Composable
 fun ScanScreen(
@@ -72,22 +47,7 @@ fun ScanScreen(
     onBack: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-    var permission by rememberSaveable {
-        mutableStateOf(
-            if (hasCameraPermission(context)) CameraPermission.GRANTED else CameraPermission.UNKNOWN,
-        )
-    }
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted ->
-        permission = if (granted) CameraPermission.GRANTED else CameraPermission.DENIED
-    }
-    LaunchedEffect(Unit) {
-        if (permission == CameraPermission.UNKNOWN) {
-            permissionLauncher.launch(Manifest.permission.CAMERA)
-        }
-    }
+    val permission = rememberCameraPermission()
     LaunchedEffect(state) {
         val found = state as? ScanUiState.Found ?: return@LaunchedEffect
         onFound(found.product.articleNumber)
@@ -103,14 +63,10 @@ fun ScanScreen(
         onScanAgain = viewModel::scanAgain,
         onBack = onBack,
         cameraPreview = {
-            CameraPreviewSection(onTextDetected = viewModel::onTextDetected)
+            TextRecognitionCameraPreview(onTextDetected = viewModel::onTextDetected)
         },
     )
 }
-
-internal fun hasCameraPermission(context: Context): Boolean =
-    ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
-        PackageManager.PERMISSION_GRANTED
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -227,79 +183,5 @@ internal fun ScanContent(
                 ScanUiState.Idle -> Unit
             }
         }
-    }
-}
-
-@Composable
-private fun CameraPreviewSection(onTextDetected: (String) -> Unit) {
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val previewView = remember {
-        PreviewView(context).apply { scaleType = PreviewView.ScaleType.FILL_CENTER }
-    }
-
-    AndroidView(
-        factory = { previewView },
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(320.dp)
-            .clip(MaterialTheme.shapes.large),
-    )
-
-    DisposableEffect(lifecycleOwner) {
-        val mainExecutor = ContextCompat.getMainExecutor(context)
-        val providerFuture = ProcessCameraProvider.getInstance(context)
-        var provider: ProcessCameraProvider? = null
-        val analyzer = LabelAnalyzer(onTextDetected)
-        providerFuture.addListener({
-            val cameraProvider = providerFuture.get()
-            provider = cameraProvider
-            val preview = Preview.Builder().build().also {
-                it.setSurfaceProvider(previewView.surfaceProvider)
-            }
-            val analysis = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build()
-                .also { it.setAnalyzer(mainExecutor, analyzer) }
-            cameraProvider.unbindAll()
-            cameraProvider.bindToLifecycle(
-                lifecycleOwner,
-                CameraSelector.DEFAULT_BACK_CAMERA,
-                preview,
-                analysis,
-            )
-        }, mainExecutor)
-        onDispose {
-            analyzer.close()
-            provider?.unbindAll()
-        }
-    }
-}
-
-/**
- * Runs ML Kit text recognition on camera frames. KEEP_ONLY_LATEST plus
- * closing the frame only when recognition completes gives natural
- * backpressure: a new frame is analyzed only when the previous one is done.
- * Deduplication of repeated numbers happens in ScanViewModel.
- */
-private class LabelAnalyzer(private val onText: (String) -> Unit) : ImageAnalysis.Analyzer {
-
-    private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-
-    @androidx.annotation.OptIn(ExperimentalGetImage::class)
-    override fun analyze(imageProxy: ImageProxy) {
-        val mediaImage = imageProxy.image
-        if (mediaImage == null) {
-            imageProxy.close()
-            return
-        }
-        val input = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-        recognizer.process(input)
-            .addOnSuccessListener { result -> onText(result.text) }
-            .addOnCompleteListener { imageProxy.close() }
-    }
-
-    fun close() {
-        recognizer.close()
     }
 }
