@@ -46,11 +46,39 @@ class ArticleNumberParserTest {
     }
 
     @Test
-    fun `keeps first-seen order and drops duplicates`() {
+    fun `keeps first-seen order among equal lengths and drops duplicates`() {
         assertEquals(
             listOf("13245", "10005"),
             ArticleNumberParser.extractCandidates("13245 10005 13245"),
         )
+    }
+
+    @Test
+    fun `puts longer runs first so the real article number is tried before a stray short one`() {
+        // A four digit run (here a year) appears before the article number in
+        // the text, but the seven digit run is the far more specific match.
+        assertEquals(
+            listOf("1324515", "2027"),
+            ArticleNumberParser.extractCandidates("Best before 2027\nNr 1324515"),
+        )
+    }
+
+    @Test
+    fun `a run followed by a volume unit is a volume, not an article number`() {
+        // Large formats print "1500 ml", which is also a valid short number
+        // for an unrelated product in the catalog.
+        assertEquals(
+            listOf("1017"),
+            ArticleNumberParser.extractCandidates("Nr 1017\n1500 ml"),
+        )
+        assertEquals(emptyList<String>(), ArticleNumberParser.extractCandidates("1500ml"))
+        assertEquals(emptyList<String>(), ArticleNumberParser.extractCandidates("3000 cl"))
+    }
+
+    @Test
+    fun `a word that merely starts with a unit letter does not hide the number`() {
+        assertEquals(listOf("1017"), ArticleNumberParser.extractCandidates("1017 Lager"))
+        assertEquals(listOf("1017"), ArticleNumberParser.extractCandidates("1017 Malt"))
     }
 
     @Test
