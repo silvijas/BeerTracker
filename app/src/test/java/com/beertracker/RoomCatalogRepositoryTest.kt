@@ -83,6 +83,21 @@ class RoomCatalogRepositoryTest {
     }
 
     @Test
+    fun `a short number shared by two packagings always resolves to the lowest full number`() = runTest {
+        // The catalog has over 200 short numbers shared by two packagings of
+        // the same beer (for example 1039114 and 1039134 both print 10391 on
+        // the shelf). Inserted highest first on purpose: without an ORDER BY
+        // whichever row is stored first would win, and that is arbitrary.
+        db.catalogDao().insertAll(
+            listOf(
+                catalogProduct(articleNumber = "1039134", articleNumberShort = "10391", name = "Variant 34").toEntity(),
+                catalogProduct(articleNumber = "1039114", articleNumberShort = "10391", name = "Variant 14").toEntity(),
+            ),
+        )
+        assertEquals("Variant 14", repo.findByArticleNumber("10391")?.name)
+    }
+
+    @Test
     fun `ignores surrounding whitespace and non digits`() = runTest {
         assertEquals("Second Beer", repo.findByArticleNumber(" Nr 10005 ")?.name)
     }
