@@ -32,9 +32,14 @@ data class CatalogMatch(val product: CatalogProduct, val score: Double)
  * and "lager" would reach "fager". Candidates are ordered by score, then by
  * name in Swedish order, and capped at [MAX_MATCHES].
  *
- * Built once per catalog list; matching runs once per camera frame and is
- * a linear pass over the vocabulary followed by a linear pass over the
- * identities, so it belongs on a background dispatcher.
+ * Built once per catalog list; matching runs once per camera frame. It is
+ * one pass over the vocabulary in which every vocabulary token of five or
+ * more letters is compared against each read token whose length is within
+ * tolerance, a Levenshtein edit distance computation per admitted pair, so
+ * the worst case cost is roughly the vocabulary size times the read token
+ * count, followed by a linear pass over the identities. That is why it
+ * belongs on a background dispatcher, and why the view model only calls it
+ * when a frame adds new words.
  */
 class CatalogTextMatcher(products: List<CatalogProduct>) {
 
@@ -47,6 +52,7 @@ class CatalogTextMatcher(products: List<CatalogProduct>) {
     private val identities: List<Identity>
     private val weights: Map<String, Double>
     private val distinctive: Set<String>
+    private val maxVocabularyLength: Int
 
     init {
         val byKey = LinkedHashMap<Pair<String, String>, Identity>()
@@ -69,12 +75,18 @@ class CatalogTextMatcher(products: List<CatalogProduct>) {
         weights = frequency.mapValues { (_, df) -> ln(1.0 + count.toDouble() / df) }
         val distinctiveLimit = maxOf(1, count / DISTINCTIVE_DIVISOR)
         distinctive = frequency.filterValues { it <= distinctiveLimit }.keys
+        maxVocabularyLength = weights.keys.maxOfOrNull { it.length } ?: 0
     }
 
     fun match(text: String): List<CatalogMatch> = match(tokenize(text))
 
     fun match(tokens: Set<String>): List<CatalogMatch> {
         if (tokens.isEmpty() || identities.isEmpty()) return emptyList()
+
+        // Reused across every candidate pair this call considers so a frame's
+        // worth of Levenshtein comparisons allocates two arrays, not two per pair.
+        val previousRow = IntArray(maxVocabularyLength + 1)
+        val currentRow = IntArray(maxVocabularyLength + 1)
 
         val exactHits = HashSet<String>()
         val seen = HashSet<String>()
@@ -85,7 +97,9 @@ class CatalogTextMatcher(products: List<CatalogProduct>) {
                 continue
             }
             val tolerance = fuzzyTolerance(token)
-            if (tolerance > 0 && tokens.any { read -> withinDistance(token, read, tolerance) }) {
+            if (tolerance > 0 &&
+                tokens.any { read -> withinDistance(read, token, tolerance, previousRow, currentRow) }
+            ) {
                 seen += token
             }
         }
@@ -109,6 +123,7 @@ class CatalogTextMatcher(products: List<CatalogProduct>) {
             if (score >= MIN_SCORE) matches += CatalogMatch(identity.product, score)
         }
 
+        if (matches.isEmpty()) return emptyList()
         val collator = Collator.getInstance(Locale("sv", "SE"))
         return matches
             .sortedWith(compareByDescending<CatalogMatch> { it.score }.thenBy(collator) { it.product.name })
@@ -147,11 +162,23 @@ class CatalogTextMatcher(products: List<CatalogProduct>) {
             else -> 0
         }
 
-        /** Levenshtein distance of [a] and [b] is at most [max]; gives up early when it cannot be. */
-        internal fun withinDistance(a: String, b: String, max: Int): Boolean {
+        /**
+         * Levenshtein distance of [a] and [b] is at most [max]; gives up early when it cannot
+         * be. [previousRow] and [currentRow] are the caller's scratch rows, reused across many
+         * calls to avoid an allocation per pair; both must have at least `b.length + 1` slots.
+         * They are locals of the caller's own call, so this stays safe to call from any thread.
+         */
+        internal fun withinDistance(
+            a: String,
+            b: String,
+            max: Int,
+            previousRow: IntArray,
+            currentRow: IntArray,
+        ): Boolean {
             if (abs(a.length - b.length) > max) return false
-            var previous = IntArray(b.length + 1) { it }
-            var current = IntArray(b.length + 1)
+            var previous = previousRow
+            var current = currentRow
+            for (j in 0..b.length) previous[j] = j
             for (i in 1..a.length) {
                 current[0] = i
                 var rowMin = i
