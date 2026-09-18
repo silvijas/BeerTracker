@@ -70,7 +70,7 @@ fun BeerNavHost(
             )
         }
         composable(
-            route = "edit?beerId={beerId}&prefillArticle={prefillArticle}",
+            route = "edit?beerId={beerId}&prefillArticle={prefillArticle}&prefillName={prefillName}",
             arguments = listOf(
                 navArgument("beerId") {
                     type = NavType.StringType
@@ -82,12 +82,18 @@ fun BeerNavHost(
                     nullable = true
                     defaultValue = null
                 },
+                navArgument("prefillName") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
             ),
         ) { backStackEntry ->
             AddEditScreen(
                 viewModel = viewModel(factory = AddEditBeerViewModel.Factory),
                 beerId = backStackEntry.arguments?.getString("beerId"),
                 prefillArticle = backStackEntry.arguments?.getString("prefillArticle"),
+                prefillName = backStackEntry.arguments?.getString("prefillName"),
                 onDone = { navController.popBackStack() },
             )
         }

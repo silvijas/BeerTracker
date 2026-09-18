@@ -93,6 +93,7 @@ fun AddEditScreen(
     viewModel: AddEditBeerViewModel,
     beerId: String?,
     prefillArticle: String? = null,
+    prefillName: String? = null,
     onDone: () -> Unit,
 ) {
     LaunchedEffect(beerId) {
@@ -101,6 +102,11 @@ fun AddEditScreen(
     LaunchedEffect(prefillArticle) {
         if (beerId == null && prefillArticle != null) {
             viewModel.prefillFromCatalog(prefillArticle)
+        }
+    }
+    LaunchedEffect(prefillName) {
+        if (beerId == null && prefillName != null) {
+            viewModel.prefillName(prefillName)
         }
     }
     val form by viewModel.form.collectAsStateWithLifecycle()

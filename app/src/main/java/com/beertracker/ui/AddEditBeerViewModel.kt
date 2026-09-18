@@ -106,6 +106,7 @@ class AddEditBeerViewModel(
     private var existing: TriedBeer? = null
     private var loadedBeerId: String? = null
     private var prefilledArticle: String? = null
+    private var prefilledName: String? = null
     private var baseline = BeerFormState()
 
     /**
@@ -220,6 +221,24 @@ class AddEditBeerViewModel(
                 // A failed lookup leaves the empty manual form usable.
             }
         }
+    }
+
+    /**
+     * Fills the Name field of an untouched add form with text read off a
+     * can that matched nothing in the catalog, so the user finishes the
+     * entry by hand with the inline suggestions still available. Runs at
+     * most once per value, so a configuration change cannot put the text
+     * back after the user cleared it, and never touches a form the user
+     * has already started, nor an existing beer being edited.
+     */
+    fun prefillName(name: String) {
+        if (loadedBeerId != null) return
+        if (prefilledName == name) return
+        prefilledName = name
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+        if (_form.value.formContent() != BeerFormState().formContent()) return
+        update { it.copy(name = trimmed) }
     }
 
     private fun formFilledFrom(product: CatalogProduct) = BeerFormState(

@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.requestFocus
 import com.beertracker.FakeBeerRepository
 import com.beertracker.FakeCatalogRepository
 import com.beertracker.MainDispatcherRule
@@ -68,5 +69,21 @@ class AddEditCatalogSearchTest {
         composeRule.onNodeWithText("Name *").performTextInput("Omni")
 
         composeRule.onNodeWithText("Omnipollo Prodigal Pale Ale").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a name carried in from the can screen shows suggestions once the field is focused`() {
+        val catalog = FakeCatalogRepository().apply { add(catalogProduct()) }
+        val vm = AddEditBeerViewModel(FakeBeerRepository(), catalog)
+        composeRule.setContent {
+            BeerTrackerTheme {
+                AddEditScreen(viewModel = vm, beerId = null, prefillName = "Omni", onDone = {})
+            }
+        }
+
+        composeRule.runOnIdle { assertEquals("Omni", vm.form.value.name) }
+        composeRule.onNodeWithText("Name *").requestFocus()
+
+        composeRule.onNodeWithText("Omnipollo Prodigal Pale Ale").assertIsDisplayed()
     }
 }

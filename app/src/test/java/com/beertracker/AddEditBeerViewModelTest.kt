@@ -737,6 +737,50 @@ class AddEditBeerViewModelTest {
 
         assertTrue(vm.form.value.hasUnsavedChanges)
     }
+
+    @Test
+    fun `prefill name fills an empty add form and marks unsaved changes`() = runTest {
+        val vm = AddEditBeerViewModel(FakeBeerRepository(), FakeCatalogRepository())
+
+        vm.prefillName("PRODIGAL PALE ALE")
+
+        assertEquals("PRODIGAL PALE ALE", vm.form.value.name)
+        assertTrue(vm.form.value.hasUnsavedChanges)
+        assertNull(vm.form.value.catalogArticleNumber)
+    }
+
+    @Test
+    fun `prefill name never overwrites text the user already typed`() = runTest {
+        val vm = AddEditBeerViewModel(FakeBeerRepository(), FakeCatalogRepository())
+
+        vm.update { it.copy(name = "My own name") }
+        vm.prefillName("PRODIGAL PALE ALE")
+
+        assertEquals("My own name", vm.form.value.name)
+    }
+
+    @Test
+    fun `prefill name is ignored while editing an existing beer`() = runTest {
+        val repo = FakeBeerRepository()
+        repo.addBeer(beer(id = "b1", name = "Saved"))
+        val vm = AddEditBeerViewModel(repo, FakeCatalogRepository())
+        vm.load("b1")
+
+        vm.prefillName("PRODIGAL PALE ALE")
+
+        assertEquals("Saved", vm.form.value.name)
+    }
+
+    @Test
+    fun `prefill name runs once per value`() = runTest {
+        val vm = AddEditBeerViewModel(FakeBeerRepository(), FakeCatalogRepository())
+
+        vm.prefillName("PRODIGAL PALE ALE")
+        vm.update { it.copy(name = "") }
+        vm.prefillName("PRODIGAL PALE ALE")
+
+        assertEquals("", vm.form.value.name)
+    }
 }
 
 private class ControlledBeerRepository(
