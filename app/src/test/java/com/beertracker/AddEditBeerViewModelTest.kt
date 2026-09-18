@@ -480,6 +480,24 @@ class AddEditBeerViewModelTest {
     }
 
     @Test
+    fun `text typed while a prefill lookup is still running is kept, not overwritten`() = runTest {
+        val catalog = FakeCatalogRepository().apply { add(catalogProduct()) }
+        val gate = CompletableDeferred<Unit>()
+        catalog.holdLookupsUntil = gate
+        val vm = AddEditBeerViewModel(FakeBeerRepository(), catalog)
+
+        vm.prefillFromCatalog("1324515")
+        // The lookup is now parked at the gate. The user starts typing.
+        vm.update { it.copy(name = "My own name") }
+        // The lookup finishes late.
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals("My own name", vm.form.value.name)
+        assertNull(vm.form.value.catalogArticleNumber)
+    }
+
+    @Test
     fun `loading an existing beer carries its image url through an edit and save`() = runTest {
         val repo = FakeBeerRepository()
         repo.addBeer(

@@ -193,16 +193,23 @@ class AddEditBeerViewModel(
      * never change a saved beer. Runs at most once per article number, so a
      * configuration change cannot overwrite the user's edits. Unknown
      * numbers leave the form as it was.
+     *
+     * The lookup is asynchronous. If the user types anything while it is
+     * still running, their text wins and the late result is dropped, so a
+     * slow lookup can never wipe out what someone has already started
+     * entering.
      */
     fun prefillFromCatalog(articleNumber: String) {
         val catalog = catalogRepository ?: return
         if (loadedBeerId != null) return
         if (prefilledArticle == articleNumber) return
         prefilledArticle = articleNumber
+        val formWhenLookupStarted = _form.value.formContent()
         viewModelScope.launch {
             try {
                 val product = catalog.findByArticleNumber(articleNumber) ?: return@launch
                 if (loadedBeerId != null) return@launch
+                if (_form.value.formContent() != formWhenLookupStarted) return@launch
                 appliedCatalogName.value = product.name
                 val prefilled = formFilledFrom(product)
                 _form.value = prefilled.copy(
