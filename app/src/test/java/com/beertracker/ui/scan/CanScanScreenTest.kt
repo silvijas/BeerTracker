@@ -103,6 +103,9 @@ class CanScanScreenTest {
         val actions = render(permission = CameraPermission.DENIED)
 
         composeRule.onNodeWithText("Camera unavailable").assertIsDisplayed()
+        composeRule
+            .onNodeWithText("Reading a can needs the camera. Allow camera access in system settings, or add the beer manually.")
+            .assertIsDisplayed()
         composeRule.onNodeWithText("Start over").assertDoesNotExist()
         composeRule.onNodeWithText("Add manually").performScrollTo().performClick()
 
@@ -110,7 +113,7 @@ class CanScanScreenTest {
     }
 
     @Test
-    fun `granted permission composes the camera preview and the waiting hint`() {
+    fun `granted permission composes the camera preview and the nothing read hint`() {
         render()
 
         composeRule.onNodeWithText("Fake camera preview").assertIsDisplayed()

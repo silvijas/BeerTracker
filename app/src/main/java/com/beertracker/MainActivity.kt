@@ -110,6 +110,7 @@ fun BeerNavHost(
                 onSwitchToCan = {
                     navController.navigate("can") {
                         popUpTo("scan") { inclusive = true }
+                        launchSingleTop = true
                     }
                 },
                 onBack = { navController.popBackStack() },
@@ -137,6 +138,7 @@ fun BeerNavHost(
                 onSwitchToShelfLabel = {
                     navController.navigate("scan") {
                         popUpTo("can") { inclusive = true }
+                        launchSingleTop = true
                     }
                 },
                 onBack = { navController.popBackStack() },
