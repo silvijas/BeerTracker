@@ -223,6 +223,23 @@ grade, so a saved beer always lands in one of the three legal states.
 - Regenerating the bundled seed with scripts/fetch_catalog.py is a development
   task for shipping a fresher starting point, not part of routine use.
 
+### Phase 3 details (added 2026-09-18)
+
+- The can path is a second mode of the scan screen, chosen with a
+  "Shelf label" / "Can" switch. It uses the same live camera and
+  on-device text recognition as the shelf-label path.
+- Words read across frames accumulate, and the offline catalog is ranked
+  by how much of each beer's name and brewery was read, with rare words
+  counting more than everyday ones and small spelling differences
+  tolerated. Up to five candidates are listed; the user taps one and lands
+  on the prefilled add form. There is no automatic jump on a single hit.
+- When nothing matches, "Add manually" carries the most name-like line
+  that was read into the add form's Name field, where the inline catalog
+  suggestions take over.
+- Nothing read is stored, neither database changes, and the camera frame
+  is not attached as the beer's photo (the add form's photo field does
+  that). Full design: docs/superpowers/specs/2026-09-18-can-photo-match-design.md.
+
 ## 8. Tech stack
 
 - Kotlin with Jetpack Compose for the UI.
