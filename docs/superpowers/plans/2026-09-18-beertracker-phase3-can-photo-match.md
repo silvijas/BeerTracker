@@ -255,6 +255,8 @@ Expected: compilation FAILS with unresolved reference `CatalogTextMatcher`.
 
 - [ ] **Step 3: Implement the matcher**
 
+Note added after review (2026-09-18): the committed class differs from the block below in three places, all from fix round 1 (commit d874e27): the two Levenshtein rows are allocated once per match call and passed into withinDistance instead of once per pair, the Collator is built only when there is at least one match, and the class KDoc states the real cost shape (a Levenshtein computation per admitted vocabulary and read token pair, then a linear pass over the identities).
+
 `app/src/main/java/com/beertracker/domain/CatalogTextMatcher.kt`:
 
 ```kotlin
