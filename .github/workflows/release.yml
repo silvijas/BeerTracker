@@ -34,6 +34,18 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v5
 
+      - name: Restore Firebase config
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        shell: bash
+        run: |
+          if [[ -z "$GOOGLE_SERVICES_JSON_BASE64" ]]; then
+            echo "::warning::GOOGLE_SERVICES_JSON_BASE64 is not configured; this build ships without Firebase sync"
+            exit 0
+          fi
+          printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > app/google-services.json
+          echo "Restored app/google-services.json"
+
       - name: Calculate build version
         shell: bash
         run: |

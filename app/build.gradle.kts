@@ -73,6 +73,15 @@ android {
     }
 }
 
+// Firebase is wired in only when its config file is present, so the app
+// still builds and tests without a Firebase project. The file is
+// git-ignored; the release workflow restores it from a secret.
+if (file("google-services.json").exists()) {
+    apply(plugin = libs.plugins.google.services.get().pluginId)
+} else {
+    logger.warn("app/google-services.json not found: building without Firebase sync")
+}
+
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
@@ -96,6 +105,12 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.kotlinx.coroutines.play.services)
+    // Firestore brings Guava at runtime only, which would leave CameraX's ListenableFuture off the compile classpath.
+    implementation(libs.guava)
     ksp(libs.androidx.room.compiler)
 
     testImplementation(libs.junit)
