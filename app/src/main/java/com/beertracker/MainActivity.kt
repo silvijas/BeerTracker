@@ -30,6 +30,8 @@ import com.beertracker.ui.scan.CanScanScreen
 import com.beertracker.ui.scan.CanScanViewModel
 import com.beertracker.ui.scan.ScanScreen
 import com.beertracker.ui.scan.ScanViewModel
+import com.beertracker.ui.sync.SyncScreen
+import com.beertracker.ui.sync.SyncViewModel
 import com.beertracker.ui.theme.BeerTrackerTheme
 import com.beertracker.ui.ThemeViewModel
 import com.beertracker.domain.ThemeMode
@@ -67,6 +69,7 @@ fun BeerNavHost(
                 onBeerClick = { id -> navController.navigate("detail/$id") },
                 onScanClick = { navController.navigate("scan") },
                 onCatalogClick = { navController.navigate("catalog") },
+                onSyncClick = { navController.navigate("sync") },
                 themeMode = themeMode,
                 onSetThemeMode = onSetThemeMode,
             )
@@ -151,6 +154,12 @@ fun BeerNavHost(
                     navController.navigate("edit?prefillArticle=$articleNumber")
                 },
                 onOpenBeer = { id -> navController.navigate("detail/$id") },
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable("sync") {
+            SyncScreen(
+                viewModel = viewModel(factory = SyncViewModel.Factory),
                 onBack = { navController.popBackStack() },
             )
         }

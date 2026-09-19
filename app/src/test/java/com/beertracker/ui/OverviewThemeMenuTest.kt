@@ -13,6 +13,7 @@ import com.beertracker.MainDispatcherRule
 import com.beertracker.domain.ThemeMode
 import com.beertracker.ui.theme.BeerTrackerTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -50,11 +51,35 @@ class OverviewThemeMenuTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("Theme").performClick()
+        composeRule.onNodeWithContentDescription("Settings").performClick()
         composeRule.onNodeWithText("System default").assertIsDisplayed()
         composeRule.onNodeWithText("Light").assertIsDisplayed()
         composeRule.onNodeWithText("Dark").performClick()
 
         assertEquals(ThemeMode.DARK, chosen)
+    }
+
+    @Test
+    fun `settings menu offers sync between phones`() {
+        var opened = false
+        composeRule.setContent {
+            BeerTrackerTheme {
+                OverviewScreen(
+                    viewModel = OverviewViewModel(FakeBeerRepository()),
+                    catalogViewModel = CatalogRefreshViewModel(
+                        FakeCatalogRepository(),
+                        FakeCatalogRefresher(),
+                    ),
+                    onAddClick = {},
+                    onBeerClick = {},
+                    onSyncClick = { opened = true },
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Settings").performClick()
+        composeRule.onNodeWithText("Sync between phones").performClick()
+
+        assertTrue(opened)
     }
 }

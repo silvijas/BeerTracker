@@ -78,6 +78,7 @@ fun OverviewScreen(
     onBeerClick: (String) -> Unit,
     onScanClick: () -> Unit = {},
     onCatalogClick: () -> Unit = {},
+    onSyncClick: () -> Unit = {},
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     onSetThemeMode: (ThemeMode) -> Unit = {},
 ) {
@@ -129,9 +130,10 @@ fun OverviewScreen(
                             )
                         }
                     }
-                    ThemeMenuAction(
+                    SettingsMenuAction(
                         themeMode = themeMode,
                         onSetThemeMode = onSetThemeMode,
+                        onSyncClick = onSyncClick,
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -409,16 +411,17 @@ private fun FilterRow(
 }
 
 @Composable
-private fun ThemeMenuAction(
+private fun SettingsMenuAction(
     themeMode: ThemeMode,
     onSetThemeMode: (ThemeMode) -> Unit,
+    onSyncClick: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { menuOpen = true }) {
             Icon(
                 Icons.Filled.Settings,
-                contentDescription = stringResource(R.string.theme_menu),
+                contentDescription = stringResource(R.string.settings_menu),
             )
         }
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
@@ -440,6 +443,14 @@ private fun ThemeMenuAction(
                     },
                 )
             }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.sync_title)) },
+                onClick = {
+                    onSyncClick()
+                    menuOpen = false
+                },
+            )
         }
     }
 }
