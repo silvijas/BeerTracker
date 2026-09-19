@@ -597,7 +597,9 @@ calls `container.syncEngine.start()` before the existing startup work.
 - A malformed beer document in Firestore: skipped and logged; it can
   never crash the app or block the other documents.
 - Firestore unavailable at startup while paired: the listener serves the
-  cache and reconnects by itself; the screen shows the last sync time.
+  cache and reconnects by itself; the screen shows the code and "Waiting
+  for the first sync." until the first server snapshot of this app session
+  (the last sync time is not persisted across restarts).
 
 ## Testing
 

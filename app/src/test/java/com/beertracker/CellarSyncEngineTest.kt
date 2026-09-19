@@ -2,6 +2,7 @@ package com.beertracker
 
 import android.app.Application
 import com.beertracker.data.CellarSyncEngine
+import com.beertracker.domain.BeerRepository
 import com.beertracker.domain.CellarInfo
 import com.beertracker.domain.CellarMembership
 import com.beertracker.domain.InviteCodes
@@ -9,10 +10,16 @@ import com.beertracker.domain.RemoteBeersUpdate
 import com.beertracker.domain.RemoteChange
 import com.beertracker.domain.SyncException
 import com.beertracker.domain.SyncStatus
+import com.beertracker.domain.TriedBeer
 import kotlin.random.Random
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
@@ -56,6 +63,24 @@ class CellarSyncEngineTest {
             clock = clock,
             random = Random(1),
         )
+    }
+
+    /** Holds observeBeers until the gate opens, so a test can cancel a caller mid-pairing. */
+    private class GatedBeerRepository(private val inner: BeerRepository) : BeerRepository {
+        val gate = CompletableDeferred<Unit>()
+
+        override fun observeBeers(): Flow<List<TriedBeer>> = flow {
+            gate.await()
+            emitAll(inner.observeBeers())
+        }
+
+        override suspend fun getBeer(id: String): TriedBeer? = inner.getBeer(id)
+
+        override suspend fun addBeer(beer: TriedBeer) = inner.addBeer(beer)
+
+        override suspend fun updateBeer(beer: TriedBeer) = inner.updateBeer(beer)
+
+        override suspend fun deleteBeer(id: String) = inner.deleteBeer(id)
     }
 
     private val paired = CellarMembership("cellar-1", "ABCDEFGH")
@@ -313,5 +338,45 @@ class CellarSyncEngineTest {
         assertEquals(2, h.remote.beersSubscriptions)
         h.remote.emitBeers("cellar-1", update(RemoteChange.Upsert(beer(id = "r1"))))
         assertEquals("Beer r1", h.local.getBeer("r1")?.name)
+    }
+
+    @Test
+    fun `the pairing upload finishes even when the caller is cancelled`() = runTest {
+        val inner = FakeBeerRepository()
+        inner.addBeer(beer(id = "a"))
+        val gated = GatedBeerRepository(inner)
+        val remote = FakeCellarRemote()
+        val store = FakeSyncMembershipStore()
+        val engine = CellarSyncEngine(
+            local = gated,
+            remote = remote,
+            membershipStore = store,
+            scope = CoroutineScope(backgroundScope.coroutineContext + UnconfinedTestDispatcher(testScheduler)),
+            random = Random(1),
+        )
+        engine.start()
+
+        val caller = launch(UnconfinedTestDispatcher(testScheduler)) { engine.createCellar() }
+        assertEquals("cellar-1", store.membership.value?.cellarId)
+        assertTrue(remote.puts.isEmpty())
+        caller.cancel()
+        gated.gate.complete(Unit)
+
+        assertEquals(listOf("a"), remote.puts.map { it.second.id })
+    }
+
+    @Test
+    fun `switching to another cellar re-subscribes for the new one`() = runTest {
+        val h = Harness(this, membership = paired)
+        h.engine.start()
+        assertEquals(1, h.remote.beersSubscriptions)
+
+        h.store.save(CellarMembership("cellar-2", "BCDEFGHJ"))
+
+        assertEquals(2, h.remote.beersSubscriptions)
+        h.remote.emitBeers("cellar-1", update(RemoteChange.Upsert(beer(id = "old"))))
+        h.remote.emitBeers("cellar-2", update(RemoteChange.Upsert(beer(id = "new"))))
+        assertNull(h.local.getBeer("old"))
+        assertEquals("Beer new", h.local.getBeer("new")?.name)
     }
 }

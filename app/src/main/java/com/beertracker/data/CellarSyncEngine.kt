@@ -15,6 +15,7 @@ import kotlin.random.Random
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -28,6 +29,7 @@ import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Keeps this phone's Room database and the shared Firestore cellar in step.
@@ -114,8 +116,13 @@ class CellarSyncEngine(
         remote.deleteBeer(membership.cellarId, beerId)
     }
 
-    /** Saving the membership starts the listeners; then everything already here goes up. */
-    private suspend fun pair(membership: CellarMembership) {
+    /**
+     * Saving the membership starts the listeners; then everything already
+     * here goes up. Not cancellable: once the membership is saved, the
+     * upload must finish even if the user leaves the screen, or the phone
+     * would be paired with none of its beers in the cellar.
+     */
+    private suspend fun pair(membership: CellarMembership) = withContext(NonCancellable) {
         membershipStore.save(membership)
         local.observeBeers().first().forEach { remote.putBeer(membership.cellarId, it) }
     }
@@ -158,6 +165,12 @@ class CellarSyncEngine(
                     local.updateBeer(change.beer.copy(photoUri = existing.photoUri))
                 }
             }
+            // A Remove is authoritative. Today the rules make a non-member's
+            // listener fail before any rollback could reach it, so REMOVED
+            // can only mean the other phone deleted the beer. If the rules
+            // ever validate beer fields, a rejected local write would also
+            // arrive here as REMOVED and delete the beer and its photo;
+            // revisit this before adding such rules.
             is RemoteChange.Remove -> local.deleteBeer(change.beerId)
         }
     }

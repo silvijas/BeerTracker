@@ -72,6 +72,10 @@ class SyncViewModel(private val engine: CellarSyncEngine) : ViewModel() {
             try {
                 action()
             } catch (problem: SyncException) {
+                // Failed wraps whatever Firebase reported (rules not published,
+                // anonymous sign-in not enabled, and so on); this log line is
+                // the only trace the user has while setting the project up.
+                if (problem is SyncException.Failed) Log.w(TAG, "Sync action failed", problem)
                 error.value = problem.toSyncError()
             } catch (problem: Exception) {
                 if (problem is CancellationException) throw problem

@@ -20,8 +20,10 @@ import com.google.firebase.firestore.MetadataChanges
 import com.google.firebase.firestore.Source
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.tasks.await
@@ -46,9 +48,9 @@ class FirestoreCellarRemote(
     override suspend fun signIn(): String {
         auth.currentUser?.let { return it.uid }
         val result = try {
-            auth.signInAnonymously().await()
-        } catch (error: FirebaseNetworkException) {
-            throw SyncException.Offline()
+            awaitServer { auth.signInAnonymously().await() }
+        } catch (error: SyncException) {
+            throw error
         } catch (error: Exception) {
             if (error is CancellationException) throw error
             throw SyncException.Failed(error)
@@ -96,6 +98,8 @@ class FirestoreCellarRemote(
         return cellarId
     }
 
+    // Every callback is a delta on the previous one, so none may be dropped;
+    // the buffer is unbounded rather than callbackFlow's default of 64.
     override fun observeCellar(cellarId: String): Flow<CellarInfo> = callbackFlow {
         val registration = firestore.collection(CELLARS).document(cellarId)
             .addSnapshotListener { snapshot, error ->
@@ -109,8 +113,10 @@ class FirestoreCellarRemote(
                 trySend(CellarInfo(inviteCode, members))
             }
         awaitClose { registration.remove() }
-    }
+    }.buffer(Channel.UNLIMITED)
 
+    // Every callback is a delta on the previous one, so none may be dropped;
+    // the buffer is unbounded rather than callbackFlow's default of 64.
     override fun observeBeers(cellarId: String): Flow<RemoteBeersUpdate> = callbackFlow {
         val registration = beers(cellarId)
             .addSnapshotListener(MetadataChanges.INCLUDE) { snapshot, error ->
@@ -142,7 +148,7 @@ class FirestoreCellarRemote(
                 )
             }
         awaitClose { registration.remove() }
-    }
+    }.buffer(Channel.UNLIMITED)
 
     override fun putBeer(cellarId: String, beer: TriedBeer) {
         beers(cellarId).document(beer.id).set(RemoteBeerCodec.toFields(beer))

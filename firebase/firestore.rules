@@ -34,6 +34,9 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['inviteCode', 'members', 'createdAt'])
         && request.resource.data.inviteCode is string
         && request.resource.data.members == [request.auth.uid];
+      // Anyone who learns a cellar id could add themselves here, so the id
+      // must only ever travel through invites/{code}: never show it in the
+      // app or put it in the share text.
       // Members may change their cellar. Anyone else may only add
       // themselves, and nothing but themselves, to members: that is how
       // joining with a code works.

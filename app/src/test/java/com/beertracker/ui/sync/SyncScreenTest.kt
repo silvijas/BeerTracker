@@ -184,5 +184,6 @@ class SyncScreenTest {
 
         composeRule.onNodeWithText("Create a shared cellar").assertIsNotEnabled()
         composeRule.onNodeWithText("Join").assertIsNotEnabled()
+        composeRule.onNodeWithText("Invite code").assertIsNotEnabled()
     }
 }

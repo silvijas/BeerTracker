@@ -35,7 +35,8 @@ window. About fifteen minutes. Nothing here needs a credit card; the Spark
    or `europe-north1`. This cannot be changed later.
 3. Start in production mode (the rules below replace the defaults anyway).
    Create.
-4. Open the "Rules" tab, delete everything there, paste the whole content of
+4. Keep the database id as (default); the app opens the default database.
+5. Open the "Rules" tab, delete everything there, paste the whole content of
    `firebase/firestore.rules` from this repository, and click "Publish".
 
 ## 5. Give the release pipeline the config
@@ -44,7 +45,7 @@ From PowerShell at the repository root (the GitHub CLI must be signed in;
 `gh auth status` shows that):
 
 ```powershell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("app\google-services.json")) | gh secret set GOOGLE_SERVICES_JSON_BASE64
+[Convert]::ToBase64String([IO.File]::ReadAllBytes((Resolve-Path "app\google-services.json"))) | gh secret set GOOGLE_SERVICES_JSON_BASE64
 ```
 
 The workflow decodes this secret into `app/google-services.json` before
@@ -74,7 +75,10 @@ build fine; only the sync screen differs.
 - "No cellar has that code": the code was mistyped, or the invite record
   was never created (check Firestore > Data > `invites`).
 - "Could not reach the server": no connection, or the Firestore database
-  was not created yet, or the rules were not published.
+  was not created yet.
+- "Something went wrong while syncing": Firebase refused the request. Check
+  that Anonymous sign-in is enabled and that the rules were published;
+  logcat (tag SyncViewModel) shows the exact reason.
 - The sync screen says sync is not set up: the APK was built without the
   config. Check the workflow run for the warning and the secret's name.
 - A write was rejected by the rules: Firestore > Rules > "Rules playground"
