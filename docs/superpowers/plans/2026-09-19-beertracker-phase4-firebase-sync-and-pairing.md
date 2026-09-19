@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-19-firebase-sync-and-pairing-design.md`. The v1 design is `docs/superpowers/specs/2026-07-28-beertracker-v1-design.md` (build order step 4).
 
+**Execution note (2026-09-19):** Task 6 pins `firebaseBom` to 34.12.0 rather than 34.19.0 and adds Guava 32.1.3-android explicitly; the reason is recorded in the spec's Background and Build and CI sections.
+
 **Execution order: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, strictly one task at a time (two Gradle builds in one checkout collide).** Tasks 1, 2 and 3 are independent of each other; 4 depends on 1; 5 depends on 4; 6 depends on 2, 3, 4 and 5; 7 depends on 6 (its factory reads `app.container.syncEngine`); 8 depends on 7; 9 depends on 8; 10 is documentation and comes last.
 
 ## Global Constraints

@@ -42,7 +42,7 @@ Systembolaget store and catches up when the connection returns.
   time: firebase-bom 34.19.0, google-services Gradle plugin 4.5.0. In BOM
   34 the Kotlin extensions ship inside `firebase-auth` and
   `firebase-firestore` themselves (the separate `-ktx` artifacts are
-  retired).
+  retired). Found while building: BOM 34.13.0 and later ship firebase-auth built with Kotlin 2.3, which this project's Kotlin 2.0.21 cannot read, so the build pins BOM 34.12.0 (firebase-auth 24.0.1, firebase-firestore 26.2.0); moving past it means upgrading Kotlin, KSP, AGP, Gradle and Room together.
 
 The Room database does not change in this phase: no new column, no new
 table, no migration. The catalog database is untouched too.
@@ -532,10 +532,10 @@ calls `container.syncEngine.start()` before the existing startup work.
 
 ### Build and CI
 
-- `gradle/libs.versions.toml`: versions `firebaseBom = "34.19.0"`,
+- `gradle/libs.versions.toml`: versions `firebaseBom = "34.12.0"`,
   `googleServices = "4.5.0"`; libraries `firebase-bom` (platform),
   `firebase-auth`, `firebase-firestore`, `kotlinx-coroutines-play-services`
-  (version ref `coroutines`); plugin `google-services`.
+  (version ref `coroutines`), `guava` 32.1.3-android (Firestore brings Guava at runtime only, and CameraX needs ListenableFuture on the compile classpath); plugin `google-services`.
 - Root `build.gradle.kts`: `alias(libs.plugins.google.services) apply false`.
 - `app/build.gradle.kts`: the three Firebase dependencies plus the
   coroutines bridge, and after the `android` block:

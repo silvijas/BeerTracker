@@ -240,6 +240,26 @@ grade, so a saved beer always lands in one of the three legal states.
   is not attached as the beer's photo (the add form's photo field does
   that). Full design: docs/superpowers/specs/2026-09-18-can-photo-match-design.md.
 
+### Phase 4 details (added 2026-09-19)
+
+- Room stays the source of truth on each phone. A sync engine mirrors the
+  beers into a Firestore cellar (`cellars/<id>/beers/<beerId>`) and applies
+  the cellar's changes back into Room, so every screen keeps working
+  exactly as before, online or not.
+- Pairing is explicit: nothing talks to Firebase until the user opens
+  "Sync between phones" from the settings menu and taps Create or Join.
+  Create signs the phone in anonymously, makes a cellar and an eight
+  character invite code shown as ABCD-EFGH; Join types that code. Both
+  phones' existing beers are merged into the cellar.
+- Conflicts resolve as last write to reach the server wins, per beer.
+  Photos stay on the phone that took them; the other phone shows the
+  catalog picture.
+- The Firebase config file is not committed. Builds without it work and
+  say so on the sync screen; the release workflow restores it from a
+  GitHub secret. Full design:
+  docs/superpowers/specs/2026-09-19-firebase-sync-and-pairing-design.md.
+  Setup steps for the project owner: docs/firebase-setup.md.
+
 ## 8. Tech stack
 
 - Kotlin with Jetpack Compose for the UI.
