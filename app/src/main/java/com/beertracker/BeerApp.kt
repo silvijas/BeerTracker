@@ -7,16 +7,22 @@ import com.beertracker.data.BeerDatabase
 import com.beertracker.data.BeerPhotoStore
 import com.beertracker.data.CatalogDatabase
 import com.beertracker.data.CatalogImporter
+import com.beertracker.data.CellarSyncEngine
 import com.beertracker.data.DefaultCatalogRefresher
+import com.beertracker.data.FirestoreCellarRemote
 import com.beertracker.data.PrefsSettingsRepository
+import com.beertracker.data.PrefsSyncMembershipStore
 import com.beertracker.data.RoomBeerRepository
 import com.beertracker.data.RoomCatalogRepository
+import com.beertracker.data.SyncingBeerRepository
 import com.beertracker.data.SystembolagetCatalogFetcher
 import com.beertracker.data.isNetworkAvailable
 import com.beertracker.domain.BeerRepository
 import com.beertracker.domain.CatalogRefresher
 import com.beertracker.domain.CatalogRepository
+import com.beertracker.domain.CellarRemote
 import com.beertracker.domain.SettingsRepository
+import com.beertracker.domain.SyncMembershipStore
 import com.beertracker.domain.shouldAutoRefresh
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -25,10 +31,16 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-class AppContainer(context: Context) {
+class AppContainer(context: Context, scope: CoroutineScope) {
     private val db = BeerDatabase.build(context)
     val beerPhotoStore = BeerPhotoStore(context.filesDir)
-    val beerRepository: BeerRepository = RoomBeerRepository(db.beerDao(), beerPhotoStore)
+    private val localBeerRepository: BeerRepository = RoomBeerRepository(db.beerDao(), beerPhotoStore)
+
+    val cellarRemote: CellarRemote = FirestoreCellarRemote.create(context)
+    val syncMembershipStore: SyncMembershipStore = PrefsSyncMembershipStore(context)
+    val syncEngine = CellarSyncEngine(localBeerRepository, cellarRemote, syncMembershipStore, scope)
+    /** Every screen writes through here, so each save is mirrored to the shared cellar. */
+    val beerRepository: BeerRepository = SyncingBeerRepository(localBeerRepository, syncEngine)
 
     private val catalogDb = CatalogDatabase.build(context)
     val catalogRepository: CatalogRepository = RoomCatalogRepository(catalogDb.catalogDao())
@@ -49,7 +61,8 @@ class BeerApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        container = AppContainer(this)
+        container = AppContainer(this, applicationScope)
+        container.syncEngine.start()
         applicationScope.launch {
             container.catalogImporter.importIfNeeded()
             deleteOrphanPhotos()
